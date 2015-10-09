@@ -24,6 +24,8 @@ Test cases
 
 To be done:
  * Labels should not intersect with each other
+ * There should be at least one label (or no?)
+ * Label should be in range if its coordinates are in viewport
 
 Development concerns
 --------------------
@@ -48,7 +50,20 @@ To make it more flexible to render (to canvas, svg, vega, anything else), we sho
 Library functions
 -----------------
 
-A function that formats time axis into an intermediate format.  It has three parameters, _interval_ (a dictionary with _start_ and _end_ values) and corresponding to that interval _viewport_, and formatting _options_.
+### Formatting
+
+#### The _formatTimeAxis_ function
+
+A function that formats time axis into an intermediate format.  It has three parameters, _interval_ (a dictionary with _start_ and _end_ values) and corresponding to that interval _viewport_, and formatting _options_.  It returns a formatted time axis object.
 
     formatTimeAxis = (interval, viewport, options) ->
-      
+      {} 
+
+### Rendering
+
+#### The _renderToCanvas_ function
+
+The following function renders already formatted time axis to html canvas.  Its parameters are _
+
+Library tests
+-------------
