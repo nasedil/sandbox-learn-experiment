@@ -170,6 +170,7 @@ The __findLeftTime()__ function calculates the rightmost point of time for curre
  * 'minute'
  * 'second'
  * 'millisecond'
+
 Another option, __options.intervalMultiplier__, says how many of such intervals are between two time points.  It should be an integer value.  For years and months we truncate them to the desired value, while for days and weeks we will count from a fixed origin day near Epoch (Monday 5 january 1970), so that any day intervals are independent from underlying months and years.  That also means that in case of months the __options.intervalMultiplier__ should be equal to 1, 2, 3, 4 or 6 to be displayed correctly.  To calculate number of days or weeks (reduced to 7 calculation for 7 days) from origin day we use binary subtracting, starting from huge multiplier equal to 1048576 (roughly 2800/11200 years), going down to base multiplier equal to 1.  For interval types smaller or equal than hours we use the __findNextPoint()__ function by incrementing local origin (the interval type and everything smaller is reset to 0).  This is done to avoid problems with daylight-saving and similar things.  In __findNextPoint()__ we make sure that edge points are consistent while using different values of __start__.
 
       findLeftTime: (start) ->
