@@ -325,7 +325,6 @@ Before we display anytihng, we define a function that colors background of canva
       canvas = document.getElementById 'timeline'
       context = canvas.getContext '2d'
       context.fillStyle = '#77FFBB'
-      context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight)
       context.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight)
 
 This simple code displays time axis when html page is loaded, in `timeline` canvas element.
@@ -344,7 +343,6 @@ Wa also add mouse tracking functionality to test our timeline.  When mouse is pr
       dragging = false
       oldX = 0
       oldY = 0
-      timeInterval = end - start
       document.getElementById('timeline').onmousedown = (event) ->
         dragging = true
         oldX = event.clientX
@@ -362,11 +360,27 @@ Wa also add mouse tracking functionality to test our timeline.  When mouse is pr
 
 Now we calculate how much time we should move.
 
+          timeInterval = end - start
           timeDelta = - deltaX * timeInterval / canvas.clientWidth
           start = new Date (start.getTime() + timeDelta)
           end = new Date (end.getTime() + timeDelta)
 
 And render it again.
+
+          recleanCanvas()
+          axisData = timelineMaker.formatTimeAxis {start, end}, canvas.width
+          timelineMaker.renderToCanvas axisData, canvas, 0, 15
+
+The same for mouse wheel:  we change `intervalLength` when wheel is scrolled.
+
+        base = 1.05
+        document.getElementById('timeline').onwheel = (event) ->
+          multiplier = Math.pow(base, event.deltaY)
+          interval = end-start
+          midPoint = start.getTime() + interval / 2
+          interval *= multiplier
+          start = new Date(midPoint - interval/2)
+          end = new Date(midPoint + interval/2)
 
           recleanCanvas()
           axisData = timelineMaker.formatTimeAxis {start, end}, canvas.width
