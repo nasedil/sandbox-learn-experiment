@@ -101,9 +101,10 @@ We should probably change ticks dictionary to lines dictionary instead, so we ca
 
         ticks = for timePoint in pointList
           {
-            x: @timeToCoord timePoint
-            yTop: -@options.tickLength / 5
-            yBottom: @options.tickLength
+            x1: @timeToCoord timePoint
+            x2: @timeToCoord timePoint
+            y1: -@options.tickLength / 5
+            y2: @options.tickLength
           }
 
 Now we add text labels too.
@@ -126,7 +127,7 @@ Here we also need to improve formatting, now it's just a quick fix to display te
 
 Now we combine all elements into a one dictionary and return it.
 
-        {ticks, textLabels}
+        {lines: ticks, textLabels}
 
 #### The __findPointList()__ function
 
@@ -269,19 +270,20 @@ In the beginning we do just regular initialization of context and its properties
         context.save()
         context.strokeStyle = '#000000'
         context.fillStyle = '#000000'
-        context.lineWidth = 2
+        context.lineWidth = 1
         context.font = 'normal 12px sans-serif'
         context.textAlign = 'center'
         context.textBaseline = 'top'
 
-To all drawing functions we pass coordinates altered by `roundForCanvas()` function, which rounds values in such a way that the resulting graphics is more sharp (especially horizontal and vertical lines and text).
+To all drawing functions we pass coordinates altered by `roundForCanvas()` function, which rounds values in such a way that lines are more sharp.
 
-        for tick in axisData.ticks
-          x = left + tick.x
-          yTop = top + tick.yTop
-          yBottom = top + tick.yBottom
-          context.moveTo @roundForCanvas(x), @roundForCanvas(yTop)
-          context.lineTo @roundForCanvas(x), @roundForCanvas(yBottom)
+        for line in axisData.lines
+          x1 = left + line.x1
+          x2 = left + line.x2
+          y1 = top + line.y1
+          y2 = top + line.y2
+          context.moveTo @roundForCanvas(x1), @roundForCanvas(y1)
+          context.lineTo @roundForCanvas(x2), @roundForCanvas(y2)
         context.stroke()
 
         for textLabel in axisData.textLabels
@@ -293,7 +295,7 @@ To all drawing functions we pass coordinates altered by `roundForCanvas()` funct
 
 #### The `roundForCanvas()` function
 
-This function may be used to avoud aliasing, especially on low-resolution displays.  It rounds coordinate to middle-pixel values, which are .5 in case of html canvas.
+This function may be used to avoud aliasing of lines, especially on low-resolution displays.  It rounds coordinate to middle-pixel values, which are .5 in case of html canvas.
 
       roundForCanvas: (coord) ->
         0.5 + Math.round(coord-0.5)
