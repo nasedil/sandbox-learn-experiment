@@ -140,8 +140,11 @@ Since we could need labels between time points, we need time points inside the i
 
 Then, we populate the list in by incrementing points until the we reach right end of the interval, using __findNextPoint()__ function.
 
-        pointList = until timePoint > end
+        pointList = [timePoint]
+        until timePoint > end
           timePoint = @findNextPoint timePoint
+          pointList.push timePoint
+        pointList
 
 #### The __findLeftTime()__ function
 
@@ -310,7 +313,7 @@ This simple code displays time axis when html page is loaded, in `timeline` canv
       context.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight)
       context.stroke()
       timelineMaker = new TimelineMaker {tickLength: 25, intervalType: 'day', intervalMultiplier: 1}
-      start = new Date('2015-06-14T23:59:59')
+      start = new Date('2015-06-15T00:00:00')
       end = new Date('2015-07-13T15:23:49')
       axisData = timelineMaker.formatTimeAxis {start, end}, canvas.width
       timelineMaker.renderToCanvas axisData, canvas, 0, 15
