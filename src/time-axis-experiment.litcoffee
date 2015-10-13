@@ -107,6 +107,15 @@ We should probably change ticks dictionary to lines dictionary instead, so we ca
             y2: @options.tickLength
           }
 
+We also add axis.
+
+        axisLine = {
+          x1: 0
+          x2: @width
+          y1: 0
+          y2: 0
+        }
+
 Now we add text labels too.
 
 Here we also need to improve formatting, now it's just a quick fix to display text.  Text should be formatted without problems on any display and resolution and shouldn't intersect ticks when it has reasonable font size.
@@ -127,7 +136,10 @@ Here we also need to improve formatting, now it's just a quick fix to display te
 
 Now we combine all elements into a one dictionary and return it.
 
-        {lines: ticks, textLabels}
+        {
+          lines: ticks.concat axisLine
+          textLabels
+        }
 
 #### The __findPointList()__ function
 
