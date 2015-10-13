@@ -18,7 +18,20 @@ Test cases
 
 ### Visual test cases
 
- 1. At least show one time label that corresponds to the provided time interval.
+ 1. All time labels and ticks should correspond to their times
+ 2. Daylight-saving time should be displayed correctly
+ 3. Leap seconds should be displayed properly
+ 4. Every interval type should be displayed properly
+   1. year
+   2. month
+   3. week
+   4. day
+   5. hour
+   6. minute
+   7. second
+   8. millisecond
+ 5. Check that lines and text are sharp
+ 6. There should be no intersection of features
 
 ### Unit test cases
 
@@ -26,6 +39,9 @@ To be done:
  * Labels should not intersect with each other
  * There should be at least one label (or no?)
  * Label should be in range if its coordinates are in viewport
+ * Check for daylight-saving time
+ * Check for daylight-saving time table for several historical intervals
+ * Check for leap seconds
 
 Development concerns
 --------------------
@@ -79,7 +95,9 @@ So we need to build a list of time points that correspond to a given time interv
 
         pointList = @findPointList @start, end
 
-Now, when we have found the list of time points, we need to construct a dictionary with graphical element properties.  To transform time value into a coordinate we use the __timeToCoord()__ function.  We start with ticks.  Each tick is a line.  The @options.tickLength parameter is a base length of a tick.
+Now, when we have found the list of time points, we need to construct a dictionary with graphical element properties.  To transform time value into a coordinate we use the __timeToCoord()__ function.  We start with ticks.  Each tick is a line.  The @options.tickLength parameter is a base length of a tick.  We assume that (y = 0) is a baseline and tick length is from baseline to `@options.tickLength` down and `@options.tickLength/5` up.
+
+We should probably change ticks dictionary to lines dictionary instead, so we can add other types of lines, like baseline.  It could be better also to move all constants to options and make ticks drawing more flexible.
 
         ticks = for timePoint in pointList
           {
@@ -88,9 +106,27 @@ Now, when we have found the list of time points, we need to construct a dictiona
             yBottom: @options.tickLength
           }
 
+Now we add text labels too.
+
+Here we also need to improve formatting, now it's just a quick fix to display text.  Text should be formatted without problems on any display and resolution and shouldn't intersect ticks when it has reasonable font size.
+
+        textLabels = for timePoint in pointList
+          {
+            x: @timeToCoord timePoint
+            y: @options.tickLength * 1.2
+            text: switch @options.intervalType
+              when 'year' then timePoint.getFullYear().toString()
+              when 'month' then timePoint.getMonth().toString()
+              when 'week', 'day' then timePoint.getDate().toString()
+              when 'hour' then timePoint.getHours().toString()
+              when 'minute' then timePoint.getMinutes().toString()
+              when 'second' then timePoint.getSeconds().toString()
+              when 'millisecond' then timePoint.getMilliseconds().toString()
+          }
+
 Now we combine all elements into a one dictionary and return it.
 
-        {ticks: ticks}
+        {ticks, textLabels}
 
 #### The __findPointList()__ function
 
@@ -229,8 +265,11 @@ In the beginning we do just regular initialization of context and its properties
         context = canvas.getContext '2d'
         context.save()
         context.strokeStyle = '#000000'
+        context.fillStyle = '#000000'
         context.lineWidth = 2
-        context.clearRect 0, 0, canvas.width, canvas.height
+        context.font = 'normal 12px sans-serif'
+        context.textAlign = 'center'
+        context.textBaseline = 'top'
 
 To all drawing functions we pass coordinates altered by `roundForCanvas()` function, which rounds values in such a way that the resulting graphics is more sharp (especially horizontal and vertical lines and text).
 
@@ -241,6 +280,11 @@ To all drawing functions we pass coordinates altered by `roundForCanvas()` funct
           context.moveTo @roundForCanvas(x), @roundForCanvas(yTop)
           context.lineTo @roundForCanvas(x), @roundForCanvas(yBottom)
         context.stroke()
+
+        for textLabel in axisData.textLabels
+          x = left + textLabel.x
+          y = top + textLabel.y
+          context.fillText textLabel.text, x, y
 
         context.restore()
 
@@ -261,8 +305,12 @@ This simple code displays time axis when html page is loaded, in `timeline` canv
 
     makeDemo = ->
       canvas = document.getElementById 'timeline'
+      context = canvas.getContext '2d'
+      context.fillStyle = '#77FFBB'
+      context.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight)
+      context.stroke()
       timelineMaker = new TimelineMaker {tickLength: 25, intervalType: 'day', intervalMultiplier: 1}
-      start = new Date('2015-06-15T00:00:00')
+      start = new Date('2015-06-14T23:59:59')
       end = new Date('2015-07-13T15:23:49')
       axisData = timelineMaker.formatTimeAxis {start, end}, canvas.width
       timelineMaker.renderToCanvas axisData, canvas, 0, 15
