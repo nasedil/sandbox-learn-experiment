@@ -289,6 +289,7 @@ In the beginning we do just regular initialization of context and its properties
 
 To all drawing functions we pass coordinates altered by `roundForCanvas()` function, which rounds values in such a way that lines are more sharp.
 
+        context.beginPath()
         for line in axisData.lines
           x1 = left + line.x1
           x2 = left + line.x2
@@ -318,18 +319,59 @@ Library tests
 Examples
 --------
 
+Before we display anytihng, we define a function that colors background of canvas in some color, to erase before rendering axis, and to make canvas area easily visible.
+
+    recleanCanvas = ->
+      canvas = document.getElementById 'timeline'
+      context = canvas.getContext '2d'
+      context.fillStyle = '#77FFBB'
+      context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight)
+      context.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight)
+
 This simple code displays time axis when html page is loaded, in `timeline` canvas element.
 
     makeDemo = ->
       canvas = document.getElementById 'timeline'
-      context = canvas.getContext '2d'
-      context.fillStyle = '#77FFBB'
-      context.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight)
-      context.stroke()
+      recleanCanvas()
       timelineMaker = new TimelineMaker {tickLength: 25, intervalType: 'day', intervalMultiplier: 1}
       start = new Date('2015-06-15T00:00:00')
       end = new Date('2015-07-13T15:23:49')
       axisData = timelineMaker.formatTimeAxis {start, end}, canvas.width
       timelineMaker.renderToCanvas axisData, canvas, 0, 15
+
+Wa also add mouse tracking functionality to test our timeline.  When mouse is pressed we can change time interval by dragging mouse.
+
+      dragging = false
+      oldX = 0
+      oldY = 0
+      timeInterval = end - start
+      document.getElementById('timeline').onmousedown = (event) ->
+        dragging = true
+        oldX = event.clientX
+        oldY = event.clientY
+
+      document.getElementById('timeline').onmouseup = (event) ->
+        dragging = false
+
+      document.getElementById('timeline').onmousemove = (event) ->
+        if dragging
+          deltaX = event.clientX - oldX
+          deltaY = event.clientY - oldY
+          oldX = event.clientX
+          oldY = event.clientY
+
+Now we calculate how much time we should move.
+
+          timeDelta = - deltaX * timeInterval / canvas.clientWidth
+          start = new Date (start.getTime() + timeDelta)
+          end = new Date (end.getTime() + timeDelta)
+
+And render it again.
+
+          recleanCanvas()
+          axisData = timelineMaker.formatTimeAxis {start, end}, canvas.width
+          timelineMaker.renderToCanvas axisData, canvas, 0, 15
+
+We run `makeDemo` function when page loads.
 
     window.onload = makeDemo
