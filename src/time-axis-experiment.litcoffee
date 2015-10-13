@@ -69,18 +69,18 @@ To make it more flexible to render (to canvas, svg, vega, anything else), we sho
 Library functions
 -----------------
 
-### The __TimelineMaker__ class
+### The `TimelineMaker` class
 
-Since formatting and rendering of timeline involves a lot of calculations, it is divided in several functions, and they are combined in the __TimelineMaker__ class.  The __options__ parameter will be a dictionary with values that are needed for formatting the timeline.
+Since formatting and rendering of timeline involves a lot of calculations, it is divided in several functions, and they are combined in the `TimelineMaker` class.  The `options` parameter will be a dictionary with values that are needed for formatting the timeline.
 
     class TimelineMaker
       constructor: (@options) ->
 
-The two functions that are intended to be called are __formatTimeAxis()__, which formats time axis into a dictionary that describes the look of axis, and one of the __renderTo...__ functions that render that data dictionary to a desired context.
+The two functions that are intended to be called are `formatTimeAxis()`, which formats time axis into a dictionary that describes the look of axis, and one of the `renderTo...` functions that render that data dictionary to a desired context.
 
-#### The __formatTimeAxis()__ function
+#### The `formatTimeAxis()` function
 
-A function that formats time axis into an intermediate format.  It has two parameters, __interval__ (a dictionary with __start__ and __end__ values, each of Date type) and corresponding to that interval __width__ of a viewport.  It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
+A function that formats time axis into an intermediate format.  It has two parameters, `interval` (a dictionary with `start` and `end` values, each of Date type) and corresponding to that interval `width` of a viewport.  It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
 
       formatTimeAxis: (interval, width) ->
         {@start, end} = interval
@@ -89,15 +89,15 @@ A function that formats time axis into an intermediate format.  It has two param
 
 We can put on axis ticks and labels, and also colour areas between them.  They correspond to a set of time points.  Labels could correspond to time points or to time intervals between these points.
 
-Ticks should correspond to _edge points_ of time, a point of time between two days (00-00), two years, months, weeks, or a sharp time point, having integer number of hours, or minutes, or seconds.  In general, while moving from bigger to smaller time interval types, every interval type has to be in integer amount, until  some point.  For example (10 years, 2 months, 3 days) from Epoch and remainder which is less than one day.  That means whe should have a parameter that corresponds to the smallest time interval that has to be integral.  We call this parameter _options.intervalType_.  We also need a number of this intervals between each tick.  This parameter will be __options.intervalMultiplier__.  There is one exception though:  in case of weeks there is no previous integral interval.  So there are two cases:  week and (year, month, day, hour, minute, second, millisecond).
+Ticks should correspond to _edge points_ of time, a point of time between two days (00-00), two years, months, weeks, or a sharp time point, having integer number of hours, or minutes, or seconds.  In general, while moving from bigger to smaller time interval types, every interval type has to be in integer amount, until  some point.  For example (10 years, 2 months, 3 days) from Epoch and remainder which is less than one day.  That means whe should have a parameter that corresponds to the smallest time interval that has to be integral.  We call this parameter _options.intervalType_.  We also need a number of this intervals between each tick.  This parameter will be `options.intervalMultiplier`.  There is one exception though:  in case of weeks there is no previous integral interval.  So there are two cases:  week and (year, month, day, hour, minute, second, millisecond).
 
-So we need to build a list of time points that correspond to a given time interval.  We will put such code in a special function, __findPointList()__.
+So we need to build a list of time points that correspond to a given time interval.  We will put such code in a special function, `findPointList()`.
 
         pointList = @findPointList @start, end
 
-Now, when we have found the list of time points, we need to construct a dictionary with graphical element properties.  To transform time value into a coordinate we use the __timeToCoord()__ function.  We start with ticks.  Each tick is a line.  The @options.tickLength parameter is a base length of a tick.  We assume that (y = 0) is a baseline and tick length is from baseline to `@options.tickLength` down and `@options.tickLength/5` up.
+Now, when we have found the list of time points, we need to construct a dictionary with graphical elements (features).  To transform time value into a coordinate we use the `timeToCoord()` function.  We start with ticks.  Each tick is a line.  The @options.tickLength parameter is a base length of a tick.  We assume that (y = 0) is a baseline and tick length is from baseline to `@options.tickLength` down and `@options.tickLength/5` up.
 
-We should probably change ticks dictionary to lines dictionary instead, so we can add other types of lines, like baseline.  It could be better also to move all constants to options and make ticks drawing more flexible.
+We store ticks and other lines in `lines` element of the dictionary.
 
         ticks = for timePoint in pointList
           {
@@ -107,7 +107,7 @@ We should probably change ticks dictionary to lines dictionary instead, so we ca
             y2: @options.tickLength
           }
 
-We also add axis.
+We also add axis (a horizontal line).
 
         axisLine = {
           x1: 0
@@ -116,9 +116,9 @@ We also add axis.
           y2: 0
         }
 
-Now we add text labels too.
+Now we construct a list of text features, each has coordinates and string.
 
-Here we also need to improve formatting, now it's just a quick fix to display text.  Text should be formatted without problems on any display and resolution and shouldn't intersect ticks when it has reasonable font size.
+_Note_:  here we also need to improve formatting, now it's just a quick fix to display text.  Text should be formatted without problems on any display and resolution and shouldn't intersect ticks when it has reasonable font size.
 
         textLabels = for timePoint in pointList
           {
@@ -141,17 +141,17 @@ Now we combine all elements into a one dictionary and return it.
           textLabels
         }
 
-#### The __findPointList()__ function
+#### The `findPointList()` function
 
-This function returns a list of points that are needed to be calculated for a (__start__, __end__) interval.
+This function returns a list of points that are needed to be calculated for a (`start`, `end`) interval.
 
       findPointList: (start, end) ->
 
-Since we could need labels between time points, we need time points inside the interval (non-inclusive) and one point on left and right side.  We can build the point list by finding the leftmost _edge point_ which is strictly less than the __start__ of the interval.  We move code that does that to the __findLeftTime()__.
+Since we could need labels between time points, we need time points inside the interval (non-inclusive) and one point on left and right side.  We can build the point list by finding the leftmost _edge point_ which is strictly less than the `start` of the interval.  We move code that does that to the `findLeftTime()`.
 
         timePoint = @findLeftTime start
 
-Then, we populate the list in by incrementing points until the we reach right end of the interval, using __findNextPoint()__ function.
+Then, we populate the list in by incrementing points until the we reach right end of the interval, using `findNextPoint()` function.
 
         pointList = [timePoint]
         until timePoint > end
@@ -159,9 +159,9 @@ Then, we populate the list in by incrementing points until the we reach right en
           pointList.push timePoint
         pointList
 
-#### The __findLeftTime()__ function
+#### The `findLeftTime()` function
 
-The __findLeftTime()__ function calculates the rightmost point of time for current __options.intervalType__ such that it is not inside the given __interval__ (excluding beginning).  The __options.intervalType__ could be one of the following:
+The `findLeftTime()` function calculates the rightmost point of time for current `options.intervalType` such that it is not inside the given `interval` (excluding beginning).  The `options.intervalType` could be one of the following:
  * 'year'
  * 'month'
  * 'week'
@@ -171,7 +171,7 @@ The __findLeftTime()__ function calculates the rightmost point of time for curre
  * 'second'
  * 'millisecond'
 
-Another option, __options.intervalMultiplier__, says how many of such intervals are between two time points.  It should be an integer value.  For years and months we truncate them to the desired value, while for days and weeks we will count from a fixed origin day near Epoch (Monday 5 january 1970), so that any day intervals are independent from underlying months and years.  That also means that in case of months the __options.intervalMultiplier__ should be equal to 1, 2, 3, 4 or 6 to be displayed correctly.  To calculate number of days or weeks (reduced to 7 calculation for 7 days) from origin day we use binary subtracting, starting from huge multiplier equal to 1048576 (roughly 2800/11200 years), going down to base multiplier equal to 1.  For interval types smaller or equal than hours we use the __findNextPoint()__ function by incrementing local origin (the interval type and everything smaller is reset to 0).  This is done to avoid problems with daylight-saving and similar things.  In __findNextPoint()__ we make sure that edge points are consistent while using different values of __start__.
+Another option, `options.intervalMultiplier`, says how many of such intervals are between two time points.  It should be an integer value.  For years and months we truncate them to the desired value, while for days and weeks we will count from a fixed origin day near Epoch (Monday 5 january 1970), so that any day intervals are independent from underlying months and years.  That also means that in case of months the `options.intervalMultiplier` should be equal to 1, 2, 3, 4 or 6 to be displayed correctly.  To calculate number of days or weeks (reduced to 7 calculation for 7 days) from origin day we use binary subtracting, starting from huge multiplier equal to 1048576 (roughly 2800/11200 years), going down to base multiplier equal to 1.  For interval types smaller or equal than hours we use the `findNextPoint()` function by incrementing local origin (the interval type and everything smaller is reset to 0).  This is done to avoid problems with daylight-saving and similar things.  In `findNextPoint()` we make sure that edge points are consistent while using different values of `start`.
 
       findLeftTime: (start) ->
         leftTime = new Date start.getTime()
@@ -221,9 +221,9 @@ Another option, __options.intervalMultiplier__, says how many of such intervals 
 
 There is a code repetition in the switch statement above.  One can think of a good way to improve this part of code.
 
-### The __findNextPoint()__ function
+### The `findNextPoint()` function
 
-This function calculates next edge time point for a current options assuming __timePoint__ argument is an edge time point.  We take care of daylight-saving time and leap seconds here, assuming that at most one hour/minute/second/millisecond is added or subtracted.  Also we assume that subtraction is not happening at time with 0 value, that is something like 00 -> 23 is not happening.
+This function calculates next edge time point for a current options assuming `timePoint` argument is an edge time point.  We take care of daylight-saving time and leap seconds here, assuming that at most one hour/minute/second/millisecond is added or subtracted.  Also we assume that subtraction is not happening at time with 0 value, that is something like 00 -> 23 is not happening.
 
 In current implementation we cope with daylight-saving time by adding hours in UTC to date and then checking how the value changes in local time and fixing by one hour if needed.  The same for leap seconds.
 
@@ -260,7 +260,7 @@ In current implementation we cope with daylight-saving time by adding hours in U
             nextTime.setUTCMilliseconds (timePoint.getUTCMilliseconds() + @options.intervalMultiplier)
         nextTime
 
-#### The __timeToCoord()__ function
+#### The `timeToCoord()` function
 
 To get coordinate of time point we use `@intervalLength` that we stored in `formatTimeAxis()`, which is equal to the number of milliseconds between `end` and `start` of the interval.  We use it to calculate pixe/time ratio, equal to `@width / @intervalLength`.
 
@@ -268,7 +268,7 @@ To get coordinate of time point we use `@intervalLength` that we stored in `form
         timeFromStart = time - @start
         coordinate = timeFromStart * @width / @intervalLength
 
-#### The __renderToCanvas()__ function
+#### The `renderToCanvas()` function
 
 This function renders formatted time axis to html canvas.
  * `axisData` is formatted data (that we get by calling any of the `format...()` functions)
