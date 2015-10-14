@@ -120,6 +120,10 @@ Now we construct a list of text features, each has coordinates and string.
 
 _Note_:  here we also need to improve formatting, now it's just a quick fix to display text.  Text should be formatted without problems on any display and resolution and shouldn't intersect ticks when it has reasonable font size.
 
+Text labels can be basically displayed in two ways.  The first one is to put label right under the tick, so that lable corresponds to time or date at this point.  Another way is to put label between ticks so that it corresponds to time interval between these two ticks.  For me it seems quite rational to use the first way to show times, and the second way to show days, months and years;  this is in case of general timeline, that we can move and zoom, and without a need to highlight particular dates.  To clarify what I mean we can consider a typical time axis in pretty much any library these days.  When zoomed out a lot, it usually shows ticks at times like 00:00, at first day of month or a year.  This is pretty logical.  But then, usually a label is shown under such tick, for examle a label of a month that starts at this point of time.  Which doesn't make much sense, because a month is a period.  When we say 'in November', we usually mean 'some time between start and end of November' (unlike when we say 'at 3', which usually means 'at 3:00').  But if the label is under 00:00 of 1st of November, it looks for a viewer like november corresponds to some time from mid-October to mid-November.  Which is very confusing and misleading too.  On the other side, showing the 'November' label in the middle of November on an axis corrects this.  This is a motivation for making two types of label positioning in our timeline implementation:  _point_ and _interval_.  They are determined by `options.labelPlacement` ('point' or 'interval').
+
+To do it we first make a list of text labels assuming point label placement.
+
         textLabels = for timePoint in pointList
           {
             x: @timeToCoord timePoint
@@ -134,12 +138,19 @@ _Note_:  here we also need to improve formatting, now it's just a quick fix to d
               when 'millisecond' then timePoint.getMilliseconds().toString()
           }
 
+Then, if `options.labelPlacement` is equal to 'interval', we remove the last item and adjust x coordinates of other items.
+
+_Note_: one could thing of better implementation here.  I tried to make it shorter and came to the current solution.
+
+        for textLabel, i in textLabels when i isnt (textLabels.length-1)
+          textLabel.x = (textLabel.x + textLabels[i+1].x) / 2
+        textLabels.pop()
+
 Now we combine all elements into a one dictionary and return it.
 
-        {
+        features =
           lines: ticks.concat axisLine
-          textLabels
-        }
+          textLabels: textLabels
 
 #### The `findPointList()` function
 
@@ -342,7 +353,11 @@ This simple code displays time axis when html page is loaded, in `timeline` canv
     makeDemo = ->
       canvas = document.getElementById 'timeline'
       recleanCanvas()
-      timelineMaker = new TimelineMaker {tickLength: 25, intervalType: 'day', intervalMultiplier: 1}
+      timelineMaker = new TimelineMaker
+        tickLength: 25
+        intervalType: 'day'
+        labelPlacement: 'interval'
+        intervalMultiplier: 1
       start = new Date('2015-06-15T00:00:00')
       end = new Date('2015-07-13T15:23:49')
       axisData = timelineMaker.formatTimeAxis {start, end}, canvas.width
