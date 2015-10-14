@@ -328,6 +328,15 @@ Before we display anytihng, we define a function that colors background of canva
       context.fillStyle = '#77FFBB'
       context.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight)
 
+The `getMousePos` function gives mouse position relative to a `canvas`.
+
+    getMousePos = (canvas, event) ->
+      rect = canvas.getBoundingClientRect()
+      {
+        x: event.clientX - rect.left
+        y: event.clientY - rect.top
+      }
+
 This simple code displays time axis when html page is loaded, in `timeline` canvas element.
 
     makeDemo = ->
@@ -346,14 +355,16 @@ Wa also add mouse tracking functionality to test our timeline.  When mouse is pr
       oldY = 0
       document.getElementById('timeline').onmousedown = (event) ->
         dragging = true
-        oldX = event.clientX
-        oldY = event.clientY
+        canvas = document.getElementById 'timeline'
+        {x: oldX, y: oldY} = getMousePos(canvas, event)
 
       document.getElementById('timeline').onmouseup = (event) ->
         dragging = false
 
       document.getElementById('timeline').onmousemove = (event) ->
         if dragging
+          canvas = document.getElementById 'timeline'
+          {x: clientX, y: clientY} = getMousePos(canvas, event)
           deltaX = event.clientX - oldX
           deltaY = event.clientY - oldY
           oldX = event.clientX
@@ -372,21 +383,29 @@ And render it again.
           axisData = timelineMaker.formatTimeAxis {start, end}, canvas.width
           timelineMaker.renderToCanvas axisData, canvas, 0, 15
 
-The same for mouse wheel:  we change `intervalLength` when wheel is scrolled.
+The same for mouse wheel:  we change `intervalLength` when wheel is scrolled.  We keep the same time value under mouse pointer before and after zooming.  This is done by multiplying interval before point and after point by zooming multiplier.  So if mouse point has time P and our interval is _(P - A, P + B)_ it becomes after zoom _(P - A*m, P + B*m)_, where _m_ is the multiplier.
 
         base = 1.05
         document.getElementById('timeline').onwheel = (event) ->
+          canvas = document.getElementById 'timeline'
           multiplier = Math.pow(base, event.deltaY)
-          interval = end-start
-          midPoint = start.getTime() + interval / 2
-          interval *= multiplier
-          start = new Date(midPoint - interval/2)
-          end = new Date(midPoint + interval/2)
+          timeInterval = end-start
+          {x: clientX, y: clientY} = getMousePos(canvas, event)
+
+In the next line we subtract `0.5` to correct mouse x offset, though it is strange that we need to subtract it.  But it works better, so we keep it as a quick fix.
+
+          leftInterval = (clientX-0.5) * timeInterval / canvas.clientWidth
+          rightInterval = timeInterval - leftInterval
+          mousePoint = start.getTime() + leftInterval
+          leftInterval *= multiplier
+          rightInterval *= multiplier
+          start = new Date(mousePoint - leftInterval)
+          end = new Date(mousePoint + rightInterval)
 
           recleanCanvas()
           axisData = timelineMaker.formatTimeAxis {start, end}, canvas.width
           timelineMaker.renderToCanvas axisData, canvas, 0, 15
 
-We run `makeDemo` function when page loads.
+We run the `makeDemo` function when page loads.
 
     window.onload = makeDemo
