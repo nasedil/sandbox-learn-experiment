@@ -71,7 +71,15 @@ Library functions
 
 ### The `TimelineMaker` class
 
-Since formatting and rendering of timeline involves a lot of calculations, it is divided in several functions, and they are combined in the `TimelineMaker` class.  The `options` parameter will be a dictionary with values that are needed for formatting the timeline.
+Since formatting and rendering of timeline involves a lot of calculations, it is divided in several functions, and they are combined in the `TimelineMaker` class.
+
+#### The `TimelineMaker()` constructor
+
+The `options` parameter is a dictionary with values that are needed for formatting timeline:
+ * `options.tickLength`:  length (in pixels) of tick from baseline downwards.
+ * `options.intervalType`:  base interval that is displayed (should be integral); can be on of 'year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'millisecond'.
+ * `options.labelPlacement`:  'point' or 'interval';  the first is for putting text labels under corresponding ticks, the second is for putting text labels between ticks (that is under intervals).
+ * `options.intervalMultiplier`:  number of base intervals that should be skipped between consequent ticks.
 
     class TimelineMaker
       constructor: (@options) ->
@@ -80,7 +88,11 @@ The two functions that are intended to be called are `formatTimeAxis()`, which f
 
 #### The `formatTimeAxis()` function
 
-A function that formats time axis into an intermediate format.  It has two parameters, `interval` (a dictionary with `start` and `end` values, each of Date type) and corresponding to that interval `width` of a viewport.  It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
+A function that formats time axis into an intermediate format.  It has two parameters:
+ * `interval`:  a dictionary with `start` and `end` values, each of `Date` type.
+ * `width` is the corresponding to that interval width of a viewport.
+
+It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
 
       formatTimeAxis: (interval, width) ->
         {@start, end} = interval
@@ -154,7 +166,11 @@ Now we combine all elements into a one dictionary and return it.
 
 #### The `findPointList()` function
 
-This function returns a list of points that are needed to be calculated for a (`start`, `end`) interval.
+This function returns a list of points that are needed to be calculated for an interval:
+ * `start`:  when the interval starts, `Date` object.
+ * `end`:  when interval ends, `Date` object.
+
+It returns a list of `Date` objects.
 
       findPointList: (start, end) ->
 
@@ -172,7 +188,7 @@ Then, we populate the list in by incrementing points until the we reach right en
 
 #### The `findLeftTime()` function
 
-The `findLeftTime()` function calculates the rightmost point of time for current `options.intervalType` such that it is not inside the given `interval` (excluding beginning).  The `options.intervalType` could be one of the following:
+The `findLeftTime()` function calculates the rightmost point of time for current `options.intervalType` such that it is not greater than a given point of time.  The `options.intervalType` could be one of the following:
  * 'year'
  * 'month'
  * 'week'
@@ -183,6 +199,11 @@ The `findLeftTime()` function calculates the rightmost point of time for current
  * 'millisecond'
 
 Another option, `options.intervalMultiplier`, says how many of such intervals are between two time points.  It should be an integer value.  For years and months we truncate them to the desired value, while for days and weeks we will count from a fixed origin day near Epoch (Monday 5 january 1970), so that any day intervals are independent from underlying months and years.  That also means that in case of months the `options.intervalMultiplier` should be equal to 1, 2, 3, 4 or 6 to be displayed correctly.  To calculate number of days or weeks (reduced to 7 calculation for 7 days) from origin day we use binary subtracting, starting from huge multiplier equal to 1048576 (roughly 2800/11200 years), going down to base multiplier equal to 1.  For interval types smaller or equal than hours we use the `findNextPoint()` function by incrementing local origin (the interval type and everything smaller is reset to 0).  This is done to avoid problems with daylight-saving and similar things.  In `findNextPoint()` we make sure that edge points are consistent while using different values of `start`.
+
+Function arguments:
+ * `start`:  a point of time, `Date` object.
+
+It returns a `Date` object.
 
       findLeftTime: (start) ->
         leftTime = new Date start.getTime()
@@ -238,6 +259,11 @@ This function calculates next edge time point for a current options assuming `ti
 
 In current implementation we cope with daylight-saving time by adding hours in UTC to date and then checking how the value changes in local time and fixing by one hour if needed.  The same for leap seconds.
 
+Function arguments:
+ * `timePoint`:  current edge time point, `Date` object.
+
+It returns a `Date` object.
+
       findNextPoint: (timePoint) ->
         nextTime = new Date timePoint.getTime()
         switch @options.intervalType
@@ -274,6 +300,11 @@ In current implementation we cope with daylight-saving time by adding hours in U
 #### The `timeToCoord()` function
 
 To get coordinate of time point we use `@intervalLength` that we stored in `formatTimeAxis()`, which is equal to the number of milliseconds between `end` and `start` of the interval.  We use it to calculate pixe/time ratio, equal to `@width / @intervalLength`.
+
+Function arguments:
+ * `time`:  time point, `Date` object.
+
+It returns a number between 0 and `@width`.
 
       timeToCoord: (time) ->
         timeFromStart = time - @start
