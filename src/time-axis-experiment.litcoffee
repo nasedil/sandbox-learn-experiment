@@ -8,6 +8,7 @@ Table of Contents
  2. [Test cases](#test-cases)
  3. [Development concerns](#development-concerns)
  4. [Library implementation](#library-implementation)
+    1. [The `TimelineMaker` class](#the-timelinemaker-class)
  5. [Library tests](#library-tests)
  6. [Examples](#examples)
 
