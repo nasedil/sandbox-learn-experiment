@@ -115,6 +115,7 @@ The `options` parameter is a dictionary with values that are needed for formatti
  * `options.labelPlacement`:  'point' or 'interval';  the first is for putting text labels under corresponding ticks, the second is for putting text labels between ticks (that is under intervals).
  * `options.intervalMultiplier`:  number of base intervals that should be skipped between consequent ticks.
 
+The code:
 
       constructor: (options) ->
         @options =
@@ -380,6 +381,7 @@ This function renders formatted time axis to html canvas.
  * `canvas` is a html canvas object on which axis is drawn
  * `left` and `top` are x- and y-coordinates of the canvas that correspond to the (0, 0) point of the axis viewport
 
+The code:
 
       renderToCanvas: (axisData, canvas, left, top) ->
 
@@ -549,6 +551,6 @@ Well, no notes yet.
 These notes are currently a draft of coding style, tricks and ideas that could be used in every CoffeeScript file.
 
 Important notes:
- * Between a bullet list and code block there should be at lest 2 empty lines, otherwise code is not formatted correctly in Github.  However, it compiles without problem and works as it should.  This is probably a Github's bug.
+ * Between a bullet list and code block there should be at lest 2 empty lines, otherwise code is not formatted correctly in Github.  However, it compiles without problem and works as it should.  This is probably a Github's bug. __Update__:  it seems that it doesn't work at all in github, something should be between a bullet list and a code block, otherwise github does not show code as code.  I will send a question to support@github.com
  * Use 60 dashes to include a horizontal line.  That makes horizontal line easily viewable in an editor too.
  * Limit line to 79 characters, at least code (text could be soft-wrapped).  That improves readability, even though screens are large these times.  Also it makes possible to view several documents on one screen.
