@@ -81,6 +81,7 @@ The `options` parameter is a dictionary with values that are needed for formatti
  * `options.labelPlacement`:  'point' or 'interval';  the first is for putting text labels under corresponding ticks, the second is for putting text labels between ticks (that is under intervals).
  * `options.intervalMultiplier`:  number of base intervals that should be skipped between consequent ticks.
 
+
     class TimelineMaker
       constructor: (@options) ->
 
@@ -316,6 +317,7 @@ This function renders formatted time axis to html canvas.
  * `axisData` is formatted data (that we get by calling any of the `format...()` functions)
  * `canvas` is a html canvas object on which axis is drawn
  * `left` and `top` are x- and y-coordinates of the canvas that correspond to the (0, 0) point of the axis viewport
+
 
       renderToCanvas: (axisData, canvas, left, top) ->
 
