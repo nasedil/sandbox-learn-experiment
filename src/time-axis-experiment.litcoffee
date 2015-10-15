@@ -1,6 +1,11 @@
 Timeline axis in CoffeeScript
 =============================
 
+Abstract
+--------
+
+This file contains an experimental implementation of time axis visualization in literate CoffeeScript.  Description is followed by source code with explanations and small demo examle.
+
 Table of Contents
 -----------------
 
@@ -17,6 +22,14 @@ Table of Contents
 
 Introduction and description
 ----------------------------
+
+### Our reasons and objectives
+
+ * Try [CoffeeScript](http://coffeescript.org/)
+ * Try [Literate Programming](https://en.wikipedia.org/wiki/Literate_programming)
+ * Reimplement time axis and try new visual and technical ideas
+
+### Description
 
 This demo is aimed at exploring possibilities of visualizing time axis.  This especially applies to situations where time axis is meant to be used in interactive plotting, being able to change from very short time intervals to very long time intervals.
 
@@ -399,6 +412,12 @@ Library tests
 
 Examples
 --------
+
+The following small example is supposed to work together with an html-file that contains a canvas element with `id` equal to 'timeline'.
+
+Time axis is displayed in that canvas;  it could be dragged using mouse and zoomed using mouse wheel.
+
+### The source code
 
 Before we display anytihng, we define a function that colors background of canvas in some color, to erase before rendering axis, and to make canvas area easily visible.
 
