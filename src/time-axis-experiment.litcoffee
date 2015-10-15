@@ -11,6 +11,9 @@ Table of Contents
     1. [The `TimelineMaker` class](#the-timelinemaker-class)
  5. [Library tests](#library-tests)
  6. [Examples](#examples)
+ 7. [Notes](#notes)
+
+----
 
 Introduction and description
 ----------------------------
@@ -76,6 +79,8 @@ The following things should be thought of before making a final version:
 ### Portability
 
 To make it more flexible to render (to canvas, svg, vega, anything else), we should have an intermediate object as output of axis formatting, which could be rendered after withe a chosen rendeder.
+
+----
 
 Library implementation
 ----------------------
@@ -378,6 +383,8 @@ This function may be used to avoud aliasing of lines, especially on low-resoluti
 Library tests
 -------------
 
+----
+
 Examples
 --------
 
@@ -474,3 +481,10 @@ In the next line we subtract `0.5` to correct mouse x offset, though it is stran
 We run the `makeDemo` function when page loads.
 
     window.onload = makeDemo
+
+----
+
+Notes
+-----
+
+This is just a first test note, to not forget about this section.
