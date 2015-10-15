@@ -1,6 +1,16 @@
 Timeline axis in CoffeeScript
 =============================
 
+Table of Contents
+-----------------
+
+ 1. [Introduction and description](#introduction-and-description)
+ 2. [Test cases](#test-cases)
+ 3. [Development concerns](#development-concerns)
+ 4. [Library implementation](#library-implementation)
+ 5. [Library tests](#library-tests)
+ 6. [Examples](#examples)
+
 Introduction and description
 ----------------------------
 
@@ -66,8 +76,8 @@ The following things should be thought of before making a final version:
 
 To make it more flexible to render (to canvas, svg, vega, anything else), we should have an intermediate object as output of axis formatting, which could be rendered after withe a chosen rendeder.
 
-Library functions
------------------
+Library implementation
+----------------------
 
 ### The `TimelineMaker` class
 
