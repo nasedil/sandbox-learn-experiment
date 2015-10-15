@@ -32,6 +32,12 @@ Introduction and description
 
 ### Description
 
+Here we try to implement a time axis that would be more readable and at the same time more informative than conventionally used time axes.  The main two ideas are:
+ * Representing days, months and years as intervals, as opposed to points in time.
+ * Layering labels, keeping hours, minutes and seconds on one layer, and days to years on other layers.
+
+### Thoughts
+
 This demo is aimed at exploring possibilities of visualizing time axis.  This especially applies to situations where time axis is meant to be used in interactive plotting, being able to change from very short time intervals to very long time intervals.
 
 Main points of usability of the timeline are:
@@ -41,11 +47,26 @@ Main points of usability of the timeline are:
  * Should be easily navigable (should work also for visually impaired).
  * Should be interactive (ideally react according to its representation).
 
+The following things should be thought of before making a final version:
+ * DPI should be taken into account.  It should work fine on any DPI display.
+ * Every element should be separated from others.
+    * Visual elements should not intersect with each other.
+    * Visual elements such as labels and ticks should be at some good distance to each other.
+ * It is a good idea to alternate colors of intervals.
+    * Use two colors.
+    * They should differ for visually impaired.
+    * And should be suitable for grey-color display.
+    * Thus, they should differ in brightness at least.
+ * Continuos change (opposed to discrete) between scales (that is zoom levels).
+    * Makes it possible to animate without jumps between representation levels, keeping viewer connection to details.
+    * Adds more information to viewer.  A question is how to keep this simple enough and not bloated with information and graphics.
+
 Test cases
 ----------
 
 ### Visual test cases
 
+This are draft-thoughts.
  1. All time labels and ticks should correspond to their times
  2. Daylight-saving time should be displayed correctly
  3. Leap seconds should be displayed properly
@@ -63,7 +84,7 @@ Test cases
 
 ### Unit test cases
 
-To be done:
+To be done, this is a draft:
  * Labels should not intersect with each other
  * There should be at least one label (or no?)
  * Label should be in range if its coordinates are in viewport
@@ -74,25 +95,9 @@ To be done:
 Development concerns
 --------------------
 
-### Readability
-
-The following things should be thought of before making a final version:
- * DPI should be taken into account.  It should work fine on any DPI display.
- * Every element should be separated from others.
-    * Visual elements should not intersect with each other.
-    * Visual elements such as labels and ticks should be at some good distance to each other.
- * It is a good idea to alternate colors of intervals.
-    * Use two colors.
-    * They should differ for visually impaired.
-    * And should be suitable for grey-color display.
-    * Thus, they should differ in brightness at least.
- * Continuos change (opposed to discrete) between scales (that is zoom levels).
-    * Makes it possible to animate without jumps between representation levels, keeping viewer connection to details.
-    * Adds more information to viewer.  A question is how to keep this simple enough and not bloated with information and graphics.
-
 ### Portability
 
-To make it more flexible to render (to canvas, svg, vega, anything else), we should have an intermediate object as output of axis formatting, which could be rendered after withe a chosen rendeder.
+To make it more flexible to render (to canvas, svg, vega, anything else), we have an intermediate object as output of axis formatting, which could be rendered after with a chosen rendeder.  We also can port only one part of code into another library if we need this.
 
 ------------------------------------------------------------
 
