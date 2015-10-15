@@ -13,7 +13,8 @@ Table of Contents
  2. [Test cases](#test-cases)
  3. [Development concerns](#development-concerns)
  4. [Library implementation](#library-implementation)
-    1. [The `TimelineMaker` class](#the-timelinemaker-class)
+    1. [The `TimeAxisMaker` class](#the-timeaxismaker-class)
+    2. [The `TimeAxisRenderer` class](#the-timeaxisrenderer-class)
  5. [Library tests](#library-tests)
  6. [Examples](#examples)
  7. [Notes](#notes)
@@ -98,11 +99,15 @@ To make it more flexible to render (to canvas, svg, vega, anything else), we sho
 Library implementation
 ----------------------
 
-### The `TimelineMaker` class
+Currently the job of visualizing time axis is split into two steps:  building structure of graphical features (such as lines and text labels) and displaying them (for example on html canvas).  The code for these steps is separated, so that an axis may be displayed using different technologies easily (html canvas, png, webgl, ...).  The first step is done using the `TimeAxisMaker` class, and the second step is done using the `TimeAxisRenderer` class.
 
-Since formatting and rendering of timeline involves a lot of calculations, it is divided in several functions, and they are combined in the `TimelineMaker` class.
+### The `TimeAxisMaker` class
 
-#### The `TimelineMaker()` constructor
+Since our formatting of time axis involves a lot of calculations, it is separated in several functions, and they are combined in the `TimeAxisMaker` class.
+
+    class TimeAxisMaker
+
+#### The `TimeAxisMaker()` constructor
 
 The `options` parameter is a dictionary with values that are needed for formatting timeline:
  * `options.tickLength`:  length (in pixels) of tick from baseline downwards.
@@ -111,7 +116,6 @@ The `options` parameter is a dictionary with values that are needed for formatti
  * `options.intervalMultiplier`:  number of base intervals that should be skipped between consequent ticks.
 
 
-    class TimelineMaker
       constructor: (options) ->
         @options =
           tickLength: options.tickLength ? 10
@@ -294,7 +298,7 @@ It returns a `Date` object.
 
 There is a code repetition in the switch statement above.  One can think of a good way to improve this part of code.
 
-### The `findNextPoint()` function
+#### The `findNextPoint()` function
 
 This function calculates next edge time point for a current options assuming `timePoint` argument is an edge time point.  We take care of daylight-saving time and leap seconds here, assuming that at most one hour/minute/second/millisecond is added or subtracted.  Also we assume that subtraction is not happening at time with 0 value, that is something like 00 -> 23 is not happening.
 
@@ -358,6 +362,16 @@ It returns a number between 0 and `@width`.
       timeToCoord: (time) ->
         timeFromStart = time - @start
         coordinate = timeFromStart * @width / @intervalLength
+
+### The `TimeAxisRenderer` class
+
+The `TimeAxisRenderer` class currently renders only to html canvas.
+
+    class TimeAxisRenderer
+
+#### The `TimeAxisRenderer` constructor
+
+      constructor: () ->
 
 #### The `renderToCanvas()` function
 
@@ -448,15 +462,16 @@ This simple code displays time axis when html page is loaded, in `timeline` canv
     makeDemo = ->
       canvas = document.getElementById 'timeline'
       recleanCanvas()
-      timelineMaker = new TimelineMaker
+      timeAxisMaker = new TimeAxisMaker
         tickLength: 25
         intervalType: 'day'
         labelPlacement: 'interval'
         intervalMultiplier: 1
       start = new Date('2015-06-15T00:00:00')
       end = new Date('2015-07-13T15:23:49')
-      axisData = timelineMaker.formatTimeAxis {start, end}, canvas.width
-      timelineMaker.renderToCanvas axisData, canvas, 0, 15
+      axisData = timeAxisMaker.formatTimeAxis {start, end}, canvas.width
+      timeAxisRedrerer = new TimeAxisRenderer()
+      timeAxisRedrerer.renderToCanvas axisData, canvas, 0, 15
 
 Wa also add mouse tracking functionality to test our timeline.  When mouse is pressed we can change time interval by dragging mouse.
 
@@ -490,8 +505,8 @@ Now we calculate how much time we should move.
 And render it again.
 
           recleanCanvas()
-          axisData = timelineMaker.formatTimeAxis {start, end}, canvas.width
-          timelineMaker.renderToCanvas axisData, canvas, 0, 15
+          axisData = timeAxisMaker.formatTimeAxis {start, end}, canvas.width
+          timeAxisRedrerer.renderToCanvas axisData, canvas, 0, 15
 
 The same for mouse wheel:  we change `intervalLength` when wheel is scrolled.  We keep the same time value under mouse pointer before and after zooming.  This is done by multiplying interval before point and after point by zooming multiplier.  So if mouse point has time P and our interval is _(P - A, P + B)_ it becomes after zoom _(P - A*m, P + B*m)_, where _m_ is the multiplier.
 
@@ -513,8 +528,8 @@ In the next line we subtract `0.5` to correct mouse x offset, though it is stran
           end = new Date(mousePoint + rightInterval)
 
           recleanCanvas()
-          axisData = timelineMaker.formatTimeAxis {start, end}, canvas.width
-          timelineMaker.renderToCanvas axisData, canvas, 0, 15
+          axisData = timeAxisMaker.formatTimeAxis {start, end}, canvas.width
+          timeAxisRedrerer.renderToCanvas axisData, canvas, 0, 15
 
 We run the `makeDemo` function when page loads.
 
