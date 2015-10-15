@@ -112,7 +112,14 @@ The `options` parameter is a dictionary with values that are needed for formatti
 
 
     class TimelineMaker
-      constructor: (@options) ->
+      constructor: (options) ->
+        @options =
+          tickLength: options.tickLength ? 10
+          intervalType: options.intervalType ? 'year'
+          labelPlacement: options.labelPlacement ? 'point'
+          intervalMultiplier: options.intervalMultiplier ? 1
+
+_Note_:  I wonder if the code above that assigns default values could be improved.
 
 The two functions that are intended to be called are `formatTimeAxis()`, which formats time axis into a dictionary that describes the look of axis, and one of the `renderTo...` functions that render that data dictionary to a desired context.
 
