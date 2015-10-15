@@ -226,11 +226,13 @@ It returns a `Date` object.
         leftTime = new Date start.getTime()
         switch @options.intervalType
           when 'year'
-            newYear = start.getFullYear() - start.getFullYear() % @options.intervalMultiplier
+            newYear = start.getFullYear() -
+              start.getFullYear() % @options.intervalMultiplier
             leftTime.setFullYear newYear, 0, 1
             leftTime.setHours 0, 0, 0, 0
           when 'month'
-            newMonth = start.getMonth() - start.getMonth() % @options.intervalMultiplier
+            newMonth = start.getMonth() -
+              start.getMonth() % @options.intervalMultiplier
             leftTime.setMonth newMonth, 1
             leftTime.setHours 0, 0, 0, 0
           when 'week', 'day'
@@ -256,7 +258,8 @@ It returns a `Date` object.
               nextTime = @findNextPoint leftTime
               leftTime = nextTime if nextTime <= start
           when 'minute'
-            newMinutes = start.getMinutes() - start.getMinutes() % @options.intervalMultiplier
+            newMinutes = start.getMinutes() -
+              start.getMinutes() % @options.intervalMultiplier
             leftTime.setMinutes newMinutes, 0, 0
           when 'second'
             leftTime.setSeconds start.getSeconds(), 0
@@ -264,7 +267,8 @@ It returns a `Date` object.
               nextTime = @findNextPoint leftTime
               leftTime = nextTime if nextTime <= start
           when 'millisecond'
-            newMilliseconds = start.getMilliseconds() - start.getMilliseconds() % @options.intervalMultiplier
+            newMilliseconds = start.getMilliseconds() -
+              start.getMilliseconds() % @options.intervalMultiplier
             leftTime.setMilliseconds newMilliseconds
         leftTime
 
@@ -285,15 +289,20 @@ It returns a `Date` object.
         nextTime = new Date timePoint.getTime()
         switch @options.intervalType
           when 'year'
-            nextTime.setFullYear (timePoint.getFullYear() + @options.intervalMultiplier)
+            nextTime.setFullYear (timePoint.getFullYear() +
+              @options.intervalMultiplier)
           when 'month'
-            nextTime.setMonth (timePoint.getMonth() + @options.intervalMultiplier)
+            nextTime.setMonth (timePoint.getMonth() +
+              @options.intervalMultiplier)
           when 'week'
-            nextTime.setDate (timePoint.getDate() + 7*@options.intervalMultiplier)
+            nextTime.setDate (timePoint.getDate() +
+              7*@options.intervalMultiplier)
           when 'day'
-            nextTime.setDate (timePoint.getDate() + @options.intervalMultiplier)
+            nextTime.setDate (timePoint.getDate() +
+              @options.intervalMultiplier)
           when 'hour'
-            nextTime.setUTCHours (timePoint.getUTCHours() + @options.intervalMultiplier)
+            nextTime.setUTCHours (timePoint.getUTCHours() +
+              @options.intervalMultiplier)
             hours = nextTime.getHours()
             if hours % @options.intervalMultiplier isnt 0
               if (hours+1) % @options.intervalMultiplier is 0
@@ -301,9 +310,11 @@ It returns a `Date` object.
               else
                 nextTime.setUTCHours (nextTime.getUTCHours() - 1)
           when 'minute'
-            nextTime.setMinutes (timePoint.getMinutes() + @options.intervalMultiplier)
+            nextTime.setMinutes (timePoint.getMinutes() +
+              @options.intervalMultiplier)
           when 'second'
-            nextTime.setUTCSeconds (timePoint.getUTCSeconds() + @options.intervalMultiplier)
+            nextTime.setUTCSeconds (timePoint.getUTCSeconds() +
+              @options.intervalMultiplier)
             seconds = nextTime.getSeconds()
             if seconds % @options.intervalMultiplier isnt 0
               if (seconds+1) % @options.intervalMultiplier is 0
@@ -311,7 +322,8 @@ It returns a `Date` object.
               else
                 nextTime.setUTCSeconds (nextTime.getUTCSeconds() - 1)
           when 'millisecond'
-            nextTime.setUTCMilliseconds (timePoint.getUTCMilliseconds() + @options.intervalMultiplier)
+            nextTime.setUTCMilliseconds (timePoint.getUTCMilliseconds() +
+              @options.intervalMultiplier)
         nextTime
 
 #### The `timeToCoord()` function
