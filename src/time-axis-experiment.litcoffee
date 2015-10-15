@@ -13,7 +13,7 @@ Table of Contents
  6. [Examples](#examples)
  7. [Notes](#notes)
 
-----
+------------------------------------------------------------
 
 Introduction and description
 ----------------------------
@@ -80,7 +80,7 @@ The following things should be thought of before making a final version:
 
 To make it more flexible to render (to canvas, svg, vega, anything else), we should have an intermediate object as output of axis formatting, which could be rendered after withe a chosen rendeder.
 
-----
+------------------------------------------------------------
 
 Library implementation
 ----------------------
@@ -383,7 +383,7 @@ This function may be used to avoud aliasing of lines, especially on low-resoluti
 Library tests
 -------------
 
-----
+------------------------------------------------------------
 
 Examples
 --------
@@ -482,9 +482,20 @@ We run the `makeDemo` function when page loads.
 
     window.onload = makeDemo
 
-----
+------------------------------------------------------------
 
 Notes
 -----
 
-This is just a first test note, to not forget about this section.
+### Notes related to only this file
+
+Well, no notes yet.
+
+### Notes that should be moved away at some point
+
+These notes are currently a draft of coding style, tricks and ideas that could be used in every CoffeeScript file.
+
+Important notes:
+ * Between a bullet list and code block there should be at lest 2 empty lines, otherwise code is not formatted correctly in Github.  However, it compiles without problem and works as it should.  This is probably a Github's bug.
+ * Use 60 dashes to include a horizontal line.  That makes horizontal line easily viewable in an editor too.
+ * Limit line to 79 characters, at least code (text could be soft-wrapped).  That improves readability, even though screens are large these times.  Also it makes possible to view several documents on one screen.
