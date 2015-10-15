@@ -332,16 +332,22 @@ In the beginning we do just regular initialization of context and its properties
         context.textAlign = 'center'
         context.textBaseline = 'top'
 
+Instead of writing the same code again when we need canvas coordinates we define an additional nested function `translateCoord()` that turns logical corrdinates into canvas coordinates.
+
+        translateCoord = (coordX, coordY) =>
+          newCoord = [
+            @roundForCanvas(left + coordX)
+            @roundForCanvas(top + coordY)
+          ]
+
 To all drawing functions we pass coordinates altered by `roundForCanvas()` function, which rounds values in such a way that lines are more sharp.
 
         context.beginPath()
         for line in axisData.lines
-          x1 = left + line.x1
-          x2 = left + line.x2
-          y1 = top + line.y1
-          y2 = top + line.y2
-          context.moveTo @roundForCanvas(x1), @roundForCanvas(y1)
-          context.lineTo @roundForCanvas(x2), @roundForCanvas(y2)
+          [x1, y1] = translateCoord(line.x1, line.y1)
+          [x2, y2] = translateCoord(line.x2, line.y2)
+          context.moveTo x1, y1
+          context.lineTo x2, y2
         context.stroke()
 
         for textLabel in axisData.textLabels
