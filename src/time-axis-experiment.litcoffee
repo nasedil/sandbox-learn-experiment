@@ -119,15 +119,21 @@ The `options` parameter is a dictionary with values that are needed for formatti
  * `options.intervalType`:  base interval that is displayed (should be integral); can be on of 'year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'millisecond'.
  * `options.labelPlacement`:  'point' or 'interval';  the first is for putting text labels under corresponding ticks, the second is for putting text labels between ticks (that is under intervals).
  * `options.intervalMultiplier`:  number of base intervals that should be skipped between consequent ticks.
+ * `options.tickTailRatio`:  relative size of a tick on the other side of a baseline, upwards (so the length of the tick upwards will be tickTailRatio * tickLength).
+ * `options.axisLineOffset`:  absolute offset downwards of the axis line.
+ * `options.labelOffset`: absolute offset downwards of labels.  A label is drawn centered horisontally and with 'top' baseline.
 
 The code:
 
       constructor: (options) ->
         @options =
           tickLength: options.tickLength ? 10
+          tickTailRatio: options.tickTailRatio ? 0.2
+          axisLineOffset: options.axisLineOffset ? 0.0
           intervalType: options.intervalType ? 'year'
           labelPlacement: options.labelPlacement ? 'point'
           intervalMultiplier: options.intervalMultiplier ? 1
+          labelOffset: options.labelOffset ? 12
 
 _Note_:  I wonder if the code above that assigns default values could be improved.
 
@@ -162,7 +168,7 @@ We store ticks and other lines in `lines` element of the dictionary.
           {
             x1: @timeToCoord timePoint
             x2: @timeToCoord timePoint
-            y1: -@options.tickLength / 5
+            y1: -@options.tickLength * @options.tickTailRatio
             y2: @options.tickLength
           }
 
@@ -171,8 +177,8 @@ We also add axis (a horizontal line).
         axisLine = {
           x1: 0
           x2: @width
-          y1: 0
-          y2: 0
+          y1: @options.axisLineOffset
+          y2: @options.axisLineOffset
         }
 
 Now we construct a list of text features, each has coordinates and string.
@@ -186,7 +192,7 @@ To do it we first make a list of text labels assuming point label placement.
         textLabels = for timePoint in pointList
           {
             x: @timeToCoord timePoint
-            y: @options.tickLength * 1.2
+            y: @options.labelOffset
             text: switch @options.intervalType
               when 'year' then timePoint.getFullYear().toString()
               when 'month' then timePoint.getMonth().toString()
