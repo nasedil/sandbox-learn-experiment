@@ -121,7 +121,8 @@ The `options` parameter is a dictionary with values that are needed for formatti
  * `options.intervalMultiplier`:  number of base intervals that should be skipped between consequent ticks.
  * `options.tickTailRatio`:  relative size of a tick on the other side of a baseline, upwards (so the length of the tick upwards will be tickTailRatio * tickLength).
  * `options.axisLineOffset`:  absolute offset downwards of the axis line.
- * `options.labelOffset`: absolute offset downwards of labels.  A label is drawn centered horisontally and with 'top' baseline.
+ * `options.labelOffset`:  absolute offset downwards of labels.  A label is drawn centered horisontally and with 'top' baseline.
+ * `options.textTemplate`:  formatting string for text labels.
 
 The code:
 
@@ -194,13 +195,13 @@ To do it we first make a list of text labels assuming point label placement.
             x: @timeToCoord timePoint
             y: @options.labelOffset
             text: switch @options.intervalType
-              when 'year' then timePoint.getFullYear().toString()
-              when 'month' then timePoint.getMonth().toString()
-              when 'week', 'day' then timePoint.getDate().toString()
-              when 'hour' then timePoint.getHours().toString()
-              when 'minute' then timePoint.getMinutes().toString()
-              when 'second' then timePoint.getSeconds().toString()
-              when 'millisecond' then timePoint.getMilliseconds().toString()
+                when 'year' then timePoint.getFullYear().toString()
+                when 'month' then timePoint.getMonth().toString()
+                when 'week', 'day' then timePoint.getDate().toString()
+                when 'hour' then timePoint.getHours().toString()
+                when 'minute' then timePoint.getMinutes().toString()
+                when 'second' then timePoint.getSeconds().toString()
+                when 'millisecond' then ".#{ timePoint.getMilliseconds() }"
           }
 
 Then, if `options.labelPlacement` is equal to 'interval', we remove the last item and adjust x coordinates of other items.
