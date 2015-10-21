@@ -17,30 +17,34 @@ Table of Contents
     2. [The `TimeAxisRenderer` class](#the-timeaxisrenderer-class)
  5. [Library tests](#library-tests)
  6. [Examples](#examples)
- 7. [Notes](#notes)
+ 7. [Information](#information)
+    1. [Authors](#authors)
+    2. [License](#license)
+    3. [Version history](#version-history)
+ 8. [Notes](#notes)
 
 ------------------------------------------------------------
 
 Introduction and description
 ----------------------------
 
-### Our reasons and objectives
+### Our reasons and objectives ###
 
  * Try [CoffeeScript](http://coffeescript.org/)
  * Try [Literate Programming](https://en.wikipedia.org/wiki/Literate_programming)
  * Reimplement time axis and try new visual and technical ideas
 
-### Description
+### Description ###
 
-Here we try to implement a time axis that would be more readable and at the same time more informative than conventionally used time axes.  The main two ideas are:
+Here we try to implement a time axis visualization that would be more readable and at the same time more informative than conventional and widespread time axes.  The main two ideas are:
  * Representing days, months and years as intervals, as opposed to points in time.
  * Layering labels, keeping hours, minutes and seconds on one layer, and days to years on other layers.
 
-### Thoughts
+### Thoughts ###
 
-This demo is aimed at exploring possibilities of visualizing time axis.  This especially applies to situations where time axis is meant to be used in interactive plotting, being able to change from very short time intervals to very long time intervals.
+This demo is aimed at exploring possibilities of visualizing time axis.  This especially applies to situations where time axis is meant to be used in interactive plotting, being able to change from very short time intervals to very long time intervals (when a user zooms and drags a corresponding plot).
 
-Main points of usability of the timeline are:
+Main points of usability of timeline are:
  * Area that the timeline takes (ideally, as little as possible).
  * Clarity and readability (ideally text/info should be concise and distinctive).
  * How much information is showed (ideally, as much as current zoom level and resolution can afford).
@@ -61,30 +65,37 @@ The following things should be thought of before making a final version:
     * Makes it possible to animate without jumps between representation levels, keeping viewer connection to details.
     * Adds more information to viewer.  A question is how to keep this simple enough and not bloated with information and graphics.
 
-Test cases
-----------
+### Notes for a reader
 
-### Visual test cases
+If something is not clear, please try to look in the [Dictionary](#dictionary) section first, where commonly used here terms are explained.  Also, there is a [Frequently Asked Questions](#frequently-asked-questions) section.  If something is still unclear or if you think you have found a bug or a mistake, please do not hesitate to write to [Eugene](https://github.com/nasedil/).
 
-This are draft-thoughts.
+Testing
+-------
+
+The implementation should be tested.  We need to decide and implement testing system.
+
+### Visual test cases ###
+
+Final version of this time axis implementation should work correctly in the following visual test cases:
  1. All time labels and ticks should correspond to their times
  2. Daylight-saving time should be displayed correctly
  3. Leap seconds should be displayed properly
  4. Every interval type should be displayed properly
-   1. year
+   1. year and longer
    2. month
    3. week
    4. day
    5. hour
    6. minute
    7. second
-   8. millisecond
+   8. millisecond and shorter
  5. Check that lines and text are sharp
- 6. There should be no intersection of features
+ 6. There should be no intersection of features (ticks and text labels)
 
-### Unit test cases
+### Unit test cases ###
 
-To be done, this is a draft:
+We should try to unit-test our code.  Here is a draft of test cases.
+
  * Labels should not intersect with each other
  * There should be at least one label (or no?)
  * Label should be in range if its coordinates are in viewport
@@ -95,9 +106,9 @@ To be done, this is a draft:
 Development concerns
 --------------------
 
-### Portability
+### Portability ###
 
-To make it more flexible to render (to canvas, svg, vega, anything else), we have an intermediate object as output of axis formatting, which could be rendered after with a chosen rendeder.  We also can port only one part of code into another library if we need this.
+To make it more flexible to render (to canvas, svg, vega, anything else), we have an intermediate object as output of axis formatting, which could be rendered after with a chosen rendeder.  We also can port only one part of code into another library if we need this.  This object consists of features with their properties, for example lines with their coordinates.
 
 ------------------------------------------------------------
 
@@ -106,25 +117,51 @@ Library implementation
 
 Currently the job of visualizing time axis is split into two steps:  building structure of graphical features (such as lines and text labels) and displaying them (for example on html canvas).  The code for these steps is separated, so that an axis may be displayed using different technologies easily (html canvas, png, webgl, ...).  The first step is done using the `TimeAxisMaker` class, and the second step is done using the `TimeAxisRenderer` class.
 
-### The `TimeAxisMaker` class
+The two functions that are intended to be called are `TimeAxisMaker.formatTimeAxis()`, which formats time axis into a dictionary that describes the look of axis, and one of the `TimeAxisRenderer.renderTo...` functions that render that data dictionary to a desired context.
+
+### The `TimeAxisMaker` class ###
 
 Since our formatting of time axis involves a lot of calculations, it is separated in several functions, and they are combined in the `TimeAxisMaker` class.
 
+All methods that build axes produce a dictionary with the following elements:
+ * A list of lines which includes the following:
+    * List of ticks.  Each tick is a vertical line, its position horisontally corresponds some _edge time point_.
+    * A horizontal axis line.
+ * A list of text labels.  Each label correspond to a time point or a time interval.
+
+Any tick should correspond to an _edge time point_, a point of time between two days (00-00), two years, months, weeks, or a sharp time point, having integer number of hours, or minutes, or seconds.  In general, while moving from bigger to smaller time interval types, every interval type has to be in integer amount, until  some point.  For example 2015 years, 2 months, 3 days and remainder which is less than one day.  That means whe should have a parameter that corresponds to the smallest time interval that has to be integral.  We call this parameter `options.intervalType`.  We also need a number of this intervals between each tick.  This parameter will be `options.intervalMultiplier`.  There is one exception though:  in case of weeks there is no previous integral interval, because a week can start one year and finish the next year.  The `options.intervalType` could be one of the following:
+ * 'year'
+ * 'month'
+ * 'week'
+ * 'day'
+ * 'hour'
+ * 'minute'
+ * 'second'
+ * 'millisecond'
+
+Another option, `options.intervalMultiplier`, says how many of such intervals are between two time points.  It should be an integer value.
+
+Text labels can be basically displayed in two ways.  The first one is to put label right under the tick, so that lable corresponds to time or date at this point.  Another way is to put label between ticks so that it corresponds to time interval between these two ticks.  For me it seems quite rational to use the first way to show times, and the second way to show days, months and years;  this is in case of general timeline, that we can move and zoom, and without a need to highlight particular dates.  To clarify what we mean we can consider a typical time axis in pretty much any library these days.  When zoomed out a lot, it usually shows ticks at times like 00:00, at first day of month or a year.  This is pretty logical.  But then, usually a label is shown under such tick, for examle a label of a month that starts at this point of time.  Which doesn't make much sense, because a month is a period.  When we say 'in November', we usually mean 'some time between start and end of November' (unlike when we say 'at 3', which usually means 'at 3:00').  But if the label is under 00:00 of 1st of November, it looks for a viewer like november corresponds to some time from mid-October to mid-November.  Which is very confusing and misleading too.  On the other side, showing the 'November' label in the middle of November on an axis corrects this.  This is a motivation for making two types of label positioning in our timeline implementation:  _point_ and _interval_.  They are determined by `options.labelPlacement` ('point' or 'interval').
+
+The exported methods of the class are:
+ * `formatTimeAxis()`:  builds ticks and labels with manual setting of parameters.  It should not be used directly, but by other methods, that will be written later.
+
+The class definition start:
+
     class TimeAxisMaker
 
-#### The `TimeAxisMaker()` constructor
+#### The `TimeAxisMaker()` constructor ####
 
-The `options` parameter is a dictionary with values that are needed for formatting timeline:
+When an object of the class is created, the `options` parameter is passed to it, which is a dictionary with values that are needed for formatting timeline:
  * `options.tickLength`:  length (in pixels) of tick from baseline downwards.
  * `options.intervalType`:  base interval that is displayed (should be integral); can be on of 'year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'millisecond'.
  * `options.labelPlacement`:  'point' or 'interval';  the first is for putting text labels under corresponding ticks, the second is for putting text labels between ticks (that is under intervals).
- * `options.intervalMultiplier`:  number of base intervals that should be skipped between consequent ticks.
- * `options.tickTailRatio`:  relative size of a tick on the other side of a baseline, upwards (so the length of the tick upwards will be tickTailRatio * tickLength).
+ * `options.intervalMultiplier`:  number of base intervals that should be skipped between consequent ticks (for example, 3 or 6; could mean 3 or 6 hours, months distance between ticks).
+ * `options.tickTailRatio`:  relative size of a tick upwards (so the length of the tick upwards will be `tickTailRatio * tickLength`).
  * `options.axisLineOffset`:  absolute offset downwards of the axis line.
  * `options.labelOffset`:  absolute offset downwards of labels.  A label is drawn centered horisontally and with 'top' baseline.
- * `options.textTemplate`:  formatting string for text labels.
 
-The code:
+If some of these options are missing, defaults are supplied:
 
       constructor: (options) ->
         @options =
@@ -138,11 +175,9 @@ The code:
 
 _Note_:  I wonder if the code above that assigns default values could be improved.
 
-The two functions that are intended to be called are `formatTimeAxis()`, which formats time axis into a dictionary that describes the look of axis, and one of the `renderTo...` functions that render that data dictionary to a desired context.
+#### The `formatTimeAxis()` function ####
 
-#### The `formatTimeAxis()` function
-
-A function that formats time axis into an intermediate format.  It has two parameters:
+A function that formats time axis.  It has two parameters:
  * `interval`:  a dictionary with `start` and `end` values, each of `Date` type.
  * `width` is the corresponding to that interval width of a viewport.
 
@@ -153,17 +188,13 @@ It returns a formatted time axis object.  This object is a collection of feature
         @intervalLength = end - @start
         @width = width
 
-We can put on axis ticks and labels, and also colour areas between them.  They correspond to a set of time points.  Labels could correspond to time points or to time intervals between these points.
+We can put on axis ticks and labels, and also colour areas between them (but the coloring is not implemented yet).  They correspond to a set of time points.  Labels could correspond to time points or to time intervals between these points.
 
-Ticks should correspond to _edge points_ of time, a point of time between two days (00-00), two years, months, weeks, or a sharp time point, having integer number of hours, or minutes, or seconds.  In general, while moving from bigger to smaller time interval types, every interval type has to be in integer amount, until  some point.  For example (10 years, 2 months, 3 days) from Epoch and remainder which is less than one day.  That means whe should have a parameter that corresponds to the smallest time interval that has to be integral.  We call this parameter _options.intervalType_.  We also need a number of this intervals between each tick.  This parameter will be `options.intervalMultiplier`.  There is one exception though:  in case of weeks there is no previous integral interval.  So there are two cases:  week and (year, month, day, hour, minute, second, millisecond).
-
-So we need to build a list of time points that correspond to a given time interval.  We will put such code in a special function, `findPointList()`.
+So we need to build a list of time points that correspond to the given `interval`.  We will put such code in a special function, `findPointList()`.
 
         pointList = @findPointList @start, end
 
-Now, when we have found the list of time points, we need to construct a dictionary with graphical elements (features).  To transform time value into a coordinate we use the `timeToCoord()` function.  We start with ticks.  Each tick is a line.  The @options.tickLength parameter is a base length of a tick.  We assume that (y = 0) is a baseline and tick length is from baseline to `@options.tickLength` down and `@options.tickLength/5` up.
-
-We store ticks and other lines in `lines` element of the dictionary.
+Now, when we have found the list of time points, we need to construct a dictionary with graphical elements.  To transform time value into a horizontal coordinate we use the `timeToCoord()` function.  We start with ticks.  Each tick is a line.  The @options.tickLength parameter is a base length of a tick.  We set tick length from baseline downwards to `@options.tickLength`, and `@options.tickLength * @options.tickTailRatio` upwards.
 
         ticks = for timePoint in pointList
           {
@@ -173,7 +204,7 @@ We store ticks and other lines in `lines` element of the dictionary.
             y2: @options.tickLength
           }
 
-We also add axis (a horizontal line).
+We also add axis (a horizontal line).  It spans the whole width of the given interval.
 
         axisLine = {
           x1: 0
@@ -185,8 +216,6 @@ We also add axis (a horizontal line).
 Now we construct a list of text features, each has coordinates and string.
 
 _Note_:  here we also need to improve formatting, now it's just a quick fix to display text.  Text should be formatted without problems on any display and resolution and shouldn't intersect ticks when it has reasonable font size.
-
-Text labels can be basically displayed in two ways.  The first one is to put label right under the tick, so that lable corresponds to time or date at this point.  Another way is to put label between ticks so that it corresponds to time interval between these two ticks.  For me it seems quite rational to use the first way to show times, and the second way to show days, months and years;  this is in case of general timeline, that we can move and zoom, and without a need to highlight particular dates.  To clarify what I mean we can consider a typical time axis in pretty much any library these days.  When zoomed out a lot, it usually shows ticks at times like 00:00, at first day of month or a year.  This is pretty logical.  But then, usually a label is shown under such tick, for examle a label of a month that starts at this point of time.  Which doesn't make much sense, because a month is a period.  When we say 'in November', we usually mean 'some time between start and end of November' (unlike when we say 'at 3', which usually means 'at 3:00').  But if the label is under 00:00 of 1st of November, it looks for a viewer like november corresponds to some time from mid-October to mid-November.  Which is very confusing and misleading too.  On the other side, showing the 'November' label in the middle of November on an axis corrects this.  This is a motivation for making two types of label positioning in our timeline implementation:  _point_ and _interval_.  They are determined by `options.labelPlacement` ('point' or 'interval').
 
 To do it we first make a list of text labels assuming point label placement.
 
@@ -204,55 +233,48 @@ To do it we first make a list of text labels assuming point label placement.
                 when 'millisecond' then ".#{ timePoint.getMilliseconds() }"
           }
 
-Then, if `options.labelPlacement` is equal to 'interval', we remove the last item and adjust x coordinates of other items.
+Then, if `options.labelPlacement` is equal to 'interval', we remove the last item and adjust horizontal coordinates of other items.
 
-_Note_: one could thing of better implementation here.  I tried to make it shorter and came to the current solution.
+_Note_: one could think of better implementation here.  I tried to make it shorter and came to the current solution.
 
         for textLabel, i in textLabels when i isnt (textLabels.length-1)
           textLabel.x = (textLabel.x + textLabels[i+1].x) / 2
         textLabels.pop()
 
-Now we combine all elements into a one dictionary and return it.
+Now we combine all elements into one dictionary and return it;  we store ticks and other lines in `lines` element of the dictionary.
 
         features =
           lines: ticks.concat axisLine
           textLabels: textLabels
 
-#### The `findPointList()` function
+#### The `findPointList()` function ####
 
-This function returns a list of points that are needed to be calculated for an interval:
+This function returns a list of points that are needed to be displayed for an interval.  The following arguments are necessary:
  * `start`:  when the interval starts, `Date` object.
- * `end`:  when interval ends, `Date` object.
+ * `end`:  when the interval ends, `Date` object.
 
 It returns a list of `Date` objects.
 
       findPointList: (start, end) ->
 
-Since we could need labels between time points, we need time points inside the interval (non-inclusive) and one point on left and right side.  We can build the point list by finding the leftmost _edge point_ which is strictly less than the `start` of the interval.  We move code that does that to the `findLeftTime()`.
+Since we could need to display labels between time points, we need to find time points inside the interval (non-inclusive) and one point on left and right side.  We can build the point list by finding the leftmost _edge time point_ which is strictly less than the `start` of the interval.  We move code that does that to the `findLeftTime()` function:
 
         timePoint = @findLeftTime start
 
-Then, we populate the list in by incrementing points until the we reach right end of the interval, using `findNextPoint()` function.
+Then, we populate the list in by incrementing points until we reach right end of the interval, using `findNextPoint()` function.  We move to that function code that gives next _edge time point_ for a supplied _edge time point_.
 
         pointList = [timePoint]
         until timePoint > end
           timePoint = @findNextPoint timePoint
           pointList.push timePoint
+
+Then we return the list of time points:
+
         pointList
 
-#### The `findLeftTime()` function
+#### The `findLeftTime()` function ####
 
-The `findLeftTime()` function calculates the rightmost point of time for current `options.intervalType` such that it is not greater than a given point of time.  The `options.intervalType` could be one of the following:
- * 'year'
- * 'month'
- * 'week'
- * 'day'
- * 'hour'
- * 'minute'
- * 'second'
- * 'millisecond'
-
-Another option, `options.intervalMultiplier`, says how many of such intervals are between two time points.  It should be an integer value.  For years and months we truncate them to the desired value, while for days and weeks we will count from a fixed origin day near Epoch (Monday 5 january 1970), so that any day intervals are independent from underlying months and years.  That also means that in case of months the `options.intervalMultiplier` should be equal to 1, 2, 3, 4 or 6 to be displayed correctly.  To calculate number of days or weeks (reduced to 7 calculation for 7 days) from origin day we use binary subtracting, starting from huge multiplier equal to 1048576 (roughly 2800/11200 years), going down to base multiplier equal to 1.  For interval types smaller or equal than hours we use the `findNextPoint()` function by incrementing local origin (the interval type and everything smaller is reset to 0).  This is done to avoid problems with daylight-saving and similar things.  In `findNextPoint()` we make sure that edge points are consistent while using different values of `start`.
+The `findLeftTime()` function calculates the rightmost _edge time point_ for current `options.intervalType` such that it is not greater than a given point of time.
 
 Function arguments:
  * `start`:  a point of time, `Date` object.
@@ -260,6 +282,9 @@ Function arguments:
 It returns a `Date` object.
 
       findLeftTime: (start) ->
+
+To calculate such value for years and months we just truncate them, while for days and weeks we will count from a fixed origin day near Epoch (Monday 5 January 1970), so that any day intervals are independent from underlying months and years.  That also means that in case of months the `options.intervalMultiplier` should be equal to 1, 2, 3, 4 or 6 to be displayed correctly.  To calculate number of days or weeks (reduced to 7 calculation for 7 days) from origin day we use binary subtracting, starting from huge multiplier equal to 1048576 (roughly 2800/11200 years), going down to base multiplier equal to 1.  For interval types smaller or equal than hours we use the `findNextPoint()` function by incrementing local origin (the interval values like years, months, and days are kept the same, while everything smaller is reset to 0).  This is done to avoid problems with daylight-saving and similar issues.  In `findNextPoint()` we make sure that edge points are consistent while using different values of `start` (for example on 02-00 before daylight-saving and 02-00 after daylight-saving on the same day both lead to the same next point if `options.intervalMultiplier` is larger than 1).
+
         leftTime = new Date start.getTime()
         switch @options.intervalType
           when 'year'
@@ -309,13 +334,11 @@ It returns a `Date` object.
             leftTime.setMilliseconds newMilliseconds
         leftTime
 
-There is a code repetition in the switch statement above.  One can think of a good way to improve this part of code.
+There is code repetition in the switch statement above.  One can think of a good way to improve this part of code.
 
-#### The `findNextPoint()` function
+#### The `findNextPoint()` function ####
 
-This function calculates next edge time point for a current options assuming `timePoint` argument is an edge time point.  We take care of daylight-saving time and leap seconds here, assuming that at most one hour/minute/second/millisecond is added or subtracted.  Also we assume that subtraction is not happening at time with 0 value, that is something like 00 -> 23 is not happening.
-
-In current implementation we cope with daylight-saving time by adding hours in UTC to date and then checking how the value changes in local time and fixing by one hour if needed.  The same for leap seconds.
+This function calculates next _edge time point_ for current options assuming `timePoint` argument is _edge time point_.  We take care of daylight-saving time and leap seconds here, assuming that at most one hour/minute/second/millisecond is added or subtracted during leap or clock change.  Also we assume that leap or clock change is not happening at time with 0 value, that is something like 00 -> 23 is not happening.
 
 Function arguments:
  * `timePoint`:  current edge time point, `Date` object.
@@ -323,6 +346,9 @@ Function arguments:
 It returns a `Date` object.
 
       findNextPoint: (timePoint) ->
+
+The algorithm behind the function is simple:  for current `options.intervalType` it increments it by `options.intervalMultiplier` using `Date` methods.  Except for cases when we deal with hours and seconds, where we check if after incremental `options.intervalType` is divisible by `options.intervalMultiplier` (which should be the case).  If not, we adjust to the right value, fixing by one hour or second.
+
         nextTime = new Date timePoint.getTime()
         switch @options.intervalType
           when 'year'
@@ -363,9 +389,9 @@ It returns a `Date` object.
               @options.intervalMultiplier)
         nextTime
 
-#### The `timeToCoord()` function
+#### The `timeToCoord()` function ####
 
-To get coordinate of time point we use `@intervalLength` that we stored in `formatTimeAxis()`, which is equal to the number of milliseconds between `end` and `start` of the interval.  We use it to calculate pixe/time ratio, equal to `@width / @intervalLength`.
+To get horizontal coordinate of time point we use `@intervalLength` that we stored in `formatTimeAxis()`, which is equal to the number of milliseconds between `end` and `start` of the interval.  We use it to calculate pixel/time ratio, equal to `@width / @intervalLength`.
 
 Function arguments:
  * `time`:  time point, `Date` object.
@@ -376,28 +402,28 @@ It returns a number between 0 and `@width`.
         timeFromStart = time - @start
         coordinate = timeFromStart * @width / @intervalLength
 
-### The `TimeAxisRenderer` class
+### The `TimeAxisRenderer` class ####
 
 The `TimeAxisRenderer` class currently renders only to html canvas.
 
     class TimeAxisRenderer
 
-#### The `TimeAxisRenderer` constructor
+#### The `TimeAxisRenderer` constructor ####
 
       constructor: () ->
 
-#### The `renderToCanvas()` function
+#### The `renderToCanvas()` function ####
 
 This function renders formatted time axis to html canvas.
- * `axisData` is formatted data (that we get by calling any of the `format...()` functions)
- * `canvas` is a html canvas object on which axis is drawn
+ * `axisData` is formatted data (that we get by calling any of the `format...()` functions of the `TimeAxisMaker` class)
+ * `canvas` is an html canvas object on which axis is drawn
  * `left` and `top` are x- and y-coordinates of the canvas that correspond to the (0, 0) point of the axis viewport
 
 The code:
 
       renderToCanvas: (axisData, canvas, left, top) ->
 
-In the beginning we do just regular initialization of context and its properties.  We also wrap our drawing code into `save()` and `restore()` to not alter context properties globally.
+In the beginning we do just regular initialization of canvas graphical context and its properties.  We also wrap our drawing code into `save()` and `restore()` to not alter context properties globally.
 
         context = canvas.getContext '2d'
         context.save()
@@ -408,15 +434,13 @@ In the beginning we do just regular initialization of context and its properties
         context.textAlign = 'center'
         context.textBaseline = 'top'
 
-Instead of writing the same code again when we need canvas coordinates we define an additional nested function `translateCoord()` that turns logical corrdinates into canvas coordinates.
+Instead of writing the same code again when we need canvas coordinates we define an additional nested function `translateCoord()` that turns logical corrdinates into canvas coordinates.  To all line drawing functions we pass coordinates altered by `roundForCanvas()` function, which rounds values in such a way that lines are more sharp.
 
         translateCoord = (coordX, coordY) =>
           newCoord = [
             @roundForCanvas(left + coordX)
             @roundForCanvas(top + coordY)
           ]
-
-To all drawing functions we pass coordinates altered by `roundForCanvas()` function, which rounds values in such a way that lines are more sharp.
 
         context.beginPath()
         for line in axisData.lines
@@ -433,7 +457,7 @@ To all drawing functions we pass coordinates altered by `roundForCanvas()` funct
 
         context.restore()
 
-#### The `roundForCanvas()` function
+#### The `roundForCanvas()` function ####
 
 This function may be used to avoud aliasing of lines, especially on low-resolution displays.  It rounds coordinate to middle-pixel values, which are .5 in case of html canvas.
 
@@ -452,7 +476,7 @@ The following small example is supposed to work together with an html-file that 
 
 Time axis is displayed in that canvas;  it could be dragged using mouse and zoomed using mouse wheel.
 
-### The source code
+### The source code ###
 
 Before we display anytihng, we define a function that colors background of canvas in some color, to erase before rendering axis, and to make canvas area easily visible.
 
@@ -551,14 +575,36 @@ We run the `makeDemo` function when page loads.
 
 ------------------------------------------------------------
 
+Information
+-----------
+
+### Authors ###
+Eugene Petkevich, https://github.com/nasedil/
+
+### License ###
+TODO Decide on license.
+
+### Version history ###
+Still in alpha.
+
 Notes
 -----
 
-### Notes related to only this file
+### Dictionary ###
 
+The following terms are routinely used in this file:
+ * _edge time point_:  a point of time that is usually displayed on time axis using tick and/or label;  usually the right part of time is all zeroed (like 0 seconds; 0 minutes and seconds; 0 hours, minutes and seconds), and the rightmost non-zero value is a round number or is a mid-point (or several thirds, fourth, fifth, etc) of a time interval (for example 5 years; 3, or 6, or 12 hours; 30 minutes), or just an integer number.  The typical progression of edge time points would be:  00:05:00, 00:10:00, 00:15:00, 00:20:00, 00:25:00, ...
+
+### Frequently Asked Questions ###
+Want to ask a question?  Write to [Eugene](https://github.com/nasedil/)!
+
+### References
+No references so far.
+
+### Notes related to only this file ###
 Well, no notes yet.
 
-### Notes that should be moved away at some point
+### Notes that should be moved away at some point ###
 
 These notes are currently a draft of coding style, tricks and ideas that could be used in every CoffeeScript file.
 
