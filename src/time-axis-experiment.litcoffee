@@ -347,7 +347,7 @@ It returns a `Date` object.
 
       findNextPoint: (timePoint) ->
 
-The algorithm behind the function is simple:  for current `options.intervalType` it increments it by `options.intervalMultiplier` using `Date` methods.  Except for cases when we deal with hours and seconds, where we check if after incremental `options.intervalType` is divisible by `options.intervalMultiplier` (which should be the case).  If not, we adjust to the right value, fixing by one hour or second.
+The algorithm behind the function is simple:  for current `options.intervalType` it increments it by `options.intervalMultiplier` using `Date` methods.  Except for cases when we deal with hours and seconds, where we check if after incremental `options.intervalType` is divisible by `options.intervalMultiplier` (which should be the case).  If not, we adjust to the most suitable value, movinhg back or forward by one hour or second.
 
         nextTime = new Date timePoint.getTime()
         switch @options.intervalType
@@ -434,13 +434,15 @@ In the beginning we do just regular initialization of canvas graphical context a
         context.textAlign = 'center'
         context.textBaseline = 'top'
 
-Instead of writing the same code again when we need canvas coordinates we define an additional nested function `translateCoord()` that turns logical corrdinates into canvas coordinates.  To all line drawing functions we pass coordinates altered by `roundForCanvas()` function, which rounds values in such a way that lines are more sharp.
+Instead of writing the same code again when we need canvas coordinates we define an additional nested function `translateCoord()` that turns logical corrdinates into canvas coordinates.  To all line drawing functions we pass coordinates altered by `roundForCanvas()` function, which rounds values in such a way that lines are more sharp.  We include `roundFlag` boolean option to the `translateCoord` function to make rounding of coordinates optional there.
 
-        translateCoord = (coordX, coordY) =>
-          newCoord = [
-            @roundForCanvas(left + coordX)
-            @roundForCanvas(top + coordY)
-          ]
+        translateCoord = (coordX, coordY, roundFlag = true) =>
+          newX = left + coordX
+          newY = top + coordY
+          if roundFlag
+            newX = @roundForCanvas newX
+            newY = @roundForCanvas newY
+          newCoord = [newX, newY]
 
         context.beginPath()
         for line in axisData.lines
@@ -451,8 +453,7 @@ Instead of writing the same code again when we need canvas coordinates we define
         context.stroke()
 
         for textLabel in axisData.textLabels
-          x = left + textLabel.x
-          y = top + textLabel.y
+          [x, y] = translateCoord(textLabel.x, textLabel.y, false)
           context.fillText textLabel.text, x, y
 
         context.restore()
