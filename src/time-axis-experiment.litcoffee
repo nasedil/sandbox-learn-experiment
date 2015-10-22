@@ -187,7 +187,7 @@ It has two arguments:
 
 It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
 
-      formatAutomatic: (interval, width, tightness = '5') ->
+      formatAutomatic: (interval, width, tightness = 5) ->
         {@start, end} = interval
         @intervalLength = end - @start
         @width = width
@@ -596,9 +596,17 @@ This simple code displays time axis when html page is loaded, in `timeline` canv
         intervalMultiplier: 1
       start = new Date('2015-06-15T00:00:00')
       end = new Date('2015-07-13T15:23:49')
-      axisData = timeAxisMaker.formatAutomatic {start, end}, canvas.width
       timeAxisRedrerer = new TimeAxisRenderer()
-      timeAxisRedrerer.renderToCanvas axisData, canvas, 0, 15
+
+Code that draws builds and draws axis is also moved in a function:
+
+      makeAxis = ->
+        axisData = timeAxisMaker.formatAutomatic {start, end}, canvas.width, 25
+        timeAxisRedrerer.renderToCanvas axisData, canvas, 0, 15
+
+Initial drawing:
+
+      do makeAxis
 
 Wa also add mouse tracking functionality to test our timeline.  When mouse is pressed we can change time interval by dragging mouse.
 
@@ -632,8 +640,7 @@ Now we calculate how much time we should move.
 And render it again.
 
           recleanCanvas()
-          axisData = timeAxisMaker.formatAutomatic {start, end}, canvas.width
-          timeAxisRedrerer.renderToCanvas axisData, canvas, 0, 15
+          do makeAxis
 
 The same for mouse wheel:  we change `intervalLength` when wheel is scrolled.  We keep the same time value under mouse pointer before and after zooming.  This is done by multiplying interval before point and after point by zooming multiplier.  So if mouse point has time P and our interval is _(P - A, P + B)_ it becomes after zoom _(P - A*m, P + B*m)_, where _m_ is the multiplier.
 
@@ -655,8 +662,7 @@ In the next line we subtract `0.5` to correct mouse x offset, though it is stran
           end = new Date(mousePoint + rightInterval)
 
           recleanCanvas()
-          axisData = timeAxisMaker.formatAutomatic {start, end}, canvas.width
-          timeAxisRedrerer.renderToCanvas axisData, canvas, 0, 15
+          do makeAxis
 
 We run the `makeDemo` function when page loads.
 
