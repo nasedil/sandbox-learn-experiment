@@ -208,10 +208,15 @@ __Note__:  after finding suitable interval we maybe need to adjust it back.  I'm
 
 __Note__:  the stuff above is really ugly.  I need to do something with that.
 
-Now, after we have found right interval, we can call the `formatFixed()` function to do formatting for that interval:
+Now, after we have found right interval, we can call the `formatFixed()` function to do formatting for that interval.  Depending on `intervalType` we choose interval or point label placement.
 
         @options.intervalType = TimeAxisMaker.intervalsProgression[intervalTypeIndex].type
         @options.intervalMultiplier = TimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers[intervalMultiplierIndex]
+        switch @options.intervalType
+          when 'year', 'month', 'week', 'day'
+            @options.labelPlacement = 'interval'
+          else
+            @options.labelPlacement = 'point'
         @formatFixed(interval, width)
 
 #### The `formatFixed()` function ####
@@ -262,23 +267,17 @@ To do it we first make a list of text labels assuming point label placement.
           {
             x: @timeToCoord timePoint
             y: @options.labelOffset
-            text: switch @options.intervalType
-                when 'year' then timePoint.getFullYear().toString()
-                when 'month' then timePoint.getMonth().toString()
-                when 'week', 'day' then timePoint.getDate().toString()
-                when 'hour' then timePoint.getHours().toString()
-                when 'minute' then timePoint.getMinutes().toString()
-                when 'second' then timePoint.getSeconds().toString()
-                when 'millisecond' then ".#{ timePoint.getMilliseconds() }"
+            text: @formatLabel timePoint, @options
           }
 
 Then, if `options.labelPlacement` is equal to 'interval', we remove the last item and adjust horizontal coordinates of other items.
 
 _Note_: one could think of better implementation here.  I tried to make it shorter and came to the current solution.
 
-        for textLabel, i in textLabels when i isnt (textLabels.length-1)
-          textLabel.x = (textLabel.x + textLabels[i+1].x) / 2
-        textLabels.pop()
+        if @options.labelPlacement is 'interval'
+          for textLabel, i in textLabels when i isnt (textLabels.length-1)
+            textLabel.x = (textLabel.x + textLabels[i+1].x) / 2
+          textLabels.pop()
 
 Now we combine all elements into one dictionary and return it;  we store ticks and other lines in `lines` element of the dictionary.
 
@@ -339,10 +338,27 @@ To calculate such value for years and months we just truncate them, while for da
           when 'week', 'day'
             leftTime.setFullYear 1970, 0, 5
             leftTime.setHours 0, 0, 0, 0
-            delta = 1048576
             intervalMultiplier = @options.intervalMultiplier
             if @options.intervalType is 'week'
               intervalMultiplier *= 7
+
+Here it can happen that `start` is actually earlier than Epoch.  Then we decrease `leftTime` first:
+
+            if start < leftTime
+              delta = 1
+              while start <= leftTime
+                leftTime = new Date leftTime.getFullYear(),
+                  leftTime.getMonth()
+                  leftTime.getDate() - delta*intervalMultiplier
+                  leftTime.getHours()
+                  leftTime.getMinutes()
+                  leftTime.getSeconds()
+                  leftTime.getMilliseconds()
+                delta *= 2
+
+Now we move forwart until we find the right point:
+
+            delta = 1048576
             while delta >= 1
               nextTime = new Date leftTime.getFullYear(),
                 leftTime.getMonth()
@@ -474,6 +490,83 @@ Return value is in milliseconds.
 
 __Note__:  should we optimize it here (both precalculate numbers and deduplicate code)?
 
+#### The `formatLabel` function ####
+
+This function returns text representation of date.
+
+      formatLabel: (timePoint, options) ->
+        switch options.intervalType
+          when 'year'
+            if (options.intervalMultiplier > 1 and
+                options.labelPlacement is 'interval')
+              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint.setFullYear(nextTimePoint.getFullYear() - 1)
+              timePoint.getFullYear().toString() +
+                '–' + nextTimePoint.getFullYear()
+            else
+              timePoint.getFullYear().toString()
+          when 'month'
+            if (options.intervalMultiplier > 1 and
+                options.labelPlacement is 'interval')
+              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint.setMonth(nextTimePoint.getMonth() - 1)
+              timePoint.getMonth().toString() +
+                '–' + nextTimePoint.getMonth().toString()
+            else
+              timePoint.getMonth().toString()
+          when 'week'
+            if options.labelPlacement is 'interval'
+              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint.setDate(nextTimePoint.getDate() - 1)
+              timePoint.getDate().toString() +
+                '–' + nextTimePoint.getDate().toString()
+            else
+              timePoint.getDate().toString()
+          when 'day'
+            if (options.intervalMultiplier > 1 and
+                options.labelPlacement is 'interval')
+              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint.setDate(nextTimePoint.getDate() - 1)
+              timePoint.getDate().toString() +
+                '–' + nextTimePoint.getDate().toString()
+            else
+              timePoint.getDate().toString()
+          when 'hour'
+            if (options.intervalMultiplier > 1 and
+                options.labelPlacement is 'interval')
+              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint.setHours(nextTimePoint.getHours())
+              timePoint.getHours().toString() +
+                '–' + nextTimePoint.getHours().toString()
+            else
+              timePoint.getHours().toString()
+          when 'minute'
+            if (options.intervalMultiplier > 1 and
+                options.labelPlacement is 'interval')
+              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint.setMinutes(nextTimePoint.getMinutes())
+              timePoint.getMinutes().toString() +
+                '–' + nextTimePoint.getMinutes().toString()
+            else
+              timePoint.getMinutes().toString()
+          when 'second'
+            if (options.intervalMultiplier > 1 and
+                options.labelPlacement is 'interval')
+              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint.setSeconds(nextTimePoint.getSeconds())
+              timePoint.getSeconds().toString() +
+                '–' + nextTimePoint.getSeconds().toString()
+            else
+              timePoint.getSeconds().toString()
+          when 'millisecond'
+            if (options.intervalMultiplier > 1 and
+                options.labelPlacement is 'interval')
+              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint.setMilliseconds(nextTimePoint.getMilliseconds())
+              ".#{ timePoint.getMilliseconds() }–.#{ nextTimePoint.getMilliseconds() }"
+            else
+              ".#{ timePoint.getMilliseconds() }"
+
 #### The `@intervalsProgression` property ####
 
 This property defines intervals that are could be used for formatting of time axis.  It is an array of objects, each of objects has two keys:  'type' with value of `intervalType` and 'multipliers' with array of values for `intervalMultiplier`.
@@ -594,6 +687,7 @@ This simple code displays time axis when html page is loaded, in `timeline` canv
         intervalType: 'day'
         labelPlacement: 'interval'
         intervalMultiplier: 1
+        labelOffset: 29
       start = new Date('2015-06-15T00:00:00')
       end = new Date('2015-07-13T15:23:49')
       timeAxisRedrerer = new TimeAxisRenderer()
@@ -601,7 +695,7 @@ This simple code displays time axis when html page is loaded, in `timeline` canv
 Code that draws builds and draws axis is also moved in a function:
 
       makeAxis = ->
-        axisData = timeAxisMaker.formatAutomatic {start, end}, canvas.width, 25
+        axisData = timeAxisMaker.formatAutomatic {start, end}, canvas.width, 15
         timeAxisRedrerer.renderToCanvas axisData, canvas, 0, 15
 
 Initial drawing:
