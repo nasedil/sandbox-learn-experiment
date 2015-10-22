@@ -117,7 +117,7 @@ Library implementation
 
 Currently the job of visualizing time axis is split into two steps:  building structure of graphical features (such as lines and text labels) and displaying them (for example on html canvas).  The code for these steps is separated, so that an axis may be displayed using different technologies easily (html canvas, png, webgl, ...).  The first step is done using the `TimeAxisMaker` class, and the second step is done using the `TimeAxisRenderer` class.
 
-The two functions that are intended to be called are `TimeAxisMaker.formatTimeAxis()`, which formats time axis into a dictionary that describes the look of axis, and one of the `TimeAxisRenderer.renderTo...` functions that render that data dictionary to a desired context.
+The two functions that are intended to be called are `TimeAxisMaker.formatAutomatic()`, which formats time axis into a dictionary that describes the look of axis, and one of the `TimeAxisRenderer.renderTo...` functions that render that data dictionary to a desired context.
 
 ### The `TimeAxisMaker` class ###
 
@@ -144,7 +144,8 @@ Another option, `options.intervalMultiplier`, says how many of such intervals ar
 Text labels can be basically displayed in two ways.  The first one is to put label right under the tick, so that lable corresponds to time or date at this point.  Another way is to put label between ticks so that it corresponds to time interval between these two ticks.  For me it seems quite rational to use the first way to show times, and the second way to show days, months and years;  this is in case of general timeline, that we can move and zoom, and without a need to highlight particular dates.  To clarify what we mean we can consider a typical time axis in pretty much any library these days.  When zoomed out a lot, it usually shows ticks at times like 00:00, at first day of month or a year.  This is pretty logical.  But then, usually a label is shown under such tick, for examle a label of a month that starts at this point of time.  Which doesn't make much sense, because a month is a period.  When we say 'in November', we usually mean 'some time between start and end of November' (unlike when we say 'at 3', which usually means 'at 3:00').  But if the label is under 00:00 of 1st of November, it looks for a viewer like november corresponds to some time from mid-October to mid-November.  Which is very confusing and misleading too.  On the other side, showing the 'November' label in the middle of November on an axis corrects this.  This is a motivation for making two types of label positioning in our timeline implementation:  _point_ and _interval_.  They are determined by `options.labelPlacement` ('point' or 'interval').
 
 The exported methods of the class are:
- * `formatTimeAxis()`:  builds ticks and labels with manual setting of parameters.  It should not be used directly, but by other methods, that will be written later.
+ * `formatAutomatic()`:  builds ticks and labels while automatically deciding what to display.  Only desired label/tick tightness is supplied as an option.
+ * `formatFixed()`:  builds ticks and labels with manual setting of parameters.  It should not be used directly, but by other methods, that will be written later.  Is used by `formatAutomatic()`.
 
 The class definition start:
 
@@ -175,15 +176,53 @@ If some of these options are missing, defaults are supplied:
 
 _Note_:  I wonder if the code above that assigns default values could be improved.
 
-#### The `formatTimeAxis()` function ####
+#### The `formatAutomatic()` function ####
 
-A function that formats time axis.  It has two parameters:
+A function that formats time axis.  It is done in two steps:  deciding which _edge time points_ should be used for formatting, and actual formatting.  The second step is done in the `formatFixed()` function.  The first step is done here.
+
+It has two arguments:
  * `interval`:  a dictionary with `start` and `end` values, each of `Date` type.
- * `width` is the corresponding to that interval width of a viewport.
+ * `width`:  the corresponding to that interval width of a viewport.
+ * `tightness`:  a number that guides how tightly should be positioned ticks and labels.  Larger values mean more ticks and labels in the same interval.  __Note__:  in the current implementation this number correspoinds to a maximal number of labels shown.
 
 It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
 
-      formatTimeAxis: (interval, width) ->
+      formatAutomatic: (interval, width, tightness = '5') ->
+        {@start, end} = interval
+        @intervalLength = end - @start
+        @width = width
+
+To decide which interval between _edge time points_ should be used, we increase that interval until we have no more points than is allowed by `tightness`.  Intervals between edge points are defined by a combination of `intervalType` and `intervalMultiplier`.  We store such combinations in the `TimeAxisMaker.intervalsProgression` structure.  We put code that calculates approximate interval between time points for such a combination into the function `TimeAxisMaker.findNominalInterval()` (this is because we can have 28 to 31 days in a month etc).
+
+        intervalTypeIndex = 0
+        intervalMultiplierIndex = 0
+        currentStepInterval = TimeAxisMaker.findNominalInterval(TimeAxisMaker.intervalsProgression[intervalTypeIndex].type, TimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers[intervalMultiplierIndex])
+        while currentStepInterval * tightness < @intervalLength
+          intervalMultiplierIndex += 1
+          if intervalMultiplierIndex >= TimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers.length
+            intervalTypeIndex += 1
+            intervalMultiplierIndex = 0
+          currentStepInterval = TimeAxisMaker.findNominalInterval(TimeAxisMaker.intervalsProgression[intervalTypeIndex].type, TimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers[intervalMultiplierIndex])
+
+__Note__:  after finding suitable interval we maybe need to adjust it back.  I'm not sure, needs to be investigated.
+
+__Note__:  the stuff above is really ugly.  I need to do something with that.
+
+Now, after we have found right interval, we can call the `formatFixed()` function to do formatting for that interval:
+
+        @options.intervalType = TimeAxisMaker.intervalsProgression[intervalTypeIndex].type
+        @options.intervalMultiplier = TimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers[intervalMultiplierIndex]
+        @formatFixed(interval, width)
+
+#### The `formatFixed()` function ####
+
+A function that formats time axis.  It has two arguments:
+ * `interval`:  a dictionary with `start` and `end` values, each of `Date` type.
+ * `width`:  the corresponding to that interval width of a viewport.
+
+It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
+
+      formatFixed: (interval, width) ->
         {@start, end} = interval
         @intervalLength = end - @start
         @width = width
@@ -316,7 +355,7 @@ To calculate such value for years and months we just truncate them, while for da
               leftTime = nextTime if nextTime <= start
           when 'hour'
             leftTime.setHours 0, 0, 0, 0
-            while leftTime < start
+            while nextTime < start
               nextTime = @findNextPoint leftTime
               leftTime = nextTime if nextTime <= start
           when 'minute'
@@ -325,7 +364,7 @@ To calculate such value for years and months we just truncate them, while for da
             leftTime.setMinutes newMinutes, 0, 0
           when 'second'
             leftTime.setSeconds start.getSeconds(), 0
-            while leftTime < start
+            while nextTime < start
               nextTime = @findNextPoint leftTime
               leftTime = nextTime if nextTime <= start
           when 'millisecond'
@@ -391,7 +430,7 @@ The algorithm behind the function is simple:  for current `options.intervalType`
 
 #### The `timeToCoord()` function ####
 
-To get horizontal coordinate of time point we use `@intervalLength` that we stored in `formatTimeAxis()`, which is equal to the number of milliseconds between `end` and `start` of the interval.  We use it to calculate pixel/time ratio, equal to `@width / @intervalLength`.
+To get horizontal coordinate of time point we use `@intervalLength` that we stored in `formatFixed()`, which is equal to the number of milliseconds between `end` and `start` of the interval.  We use it to calculate pixel/time ratio, equal to `@width / @intervalLength`.
 
 Function arguments:
  * `time`:  time point, `Date` object.
@@ -401,6 +440,55 @@ It returns a number between 0 and `@width`.
       timeToCoord: (time) ->
         timeFromStart = time - @start
         coordinate = timeFromStart * @width / @intervalLength
+
+#### The `findNominalInterval()` function ####
+
+This function returns the approximate length of interval between two consecutive edge time points for a given values of `intervalType` and `intervalMultiplier`.
+
+Return value is in milliseconds.
+
+      @findNominalInterval: (intervalType, intervalMultiplier) ->
+        switch intervalType
+          when 'year'
+            millisecondsInYear = 1000*60*60*24*365
+            intervalMultiplier * millisecondsInYear
+          when 'month'
+            millisecondsInMonth = 1000*60*60*24*30
+            intervalMultiplier * millisecondsInMonth
+          when 'week'
+            millisecondsInWeek = 1000*60*60*24*7
+            intervalMultiplier * millisecondsInWeek
+          when 'day'
+            millisecondsInDay = 1000*60*60*24
+            intervalMultiplier * millisecondsInDay
+          when 'hour'
+            millisecondsInHour = 1000*60*60
+            intervalMultiplier * millisecondsInHour
+          when 'minute'
+            millisecondsInMinute = 1000*60
+            intervalMultiplier * millisecondsInMinute
+          when 'second'
+            intervalMultiplier * 1000
+          when 'millisecond'
+            intervalMultiplier
+
+__Note__:  should we optimize it here (both precalculate numbers and deduplicate code)?
+
+#### The `@intervalsProgression` property ####
+
+This property defines intervals that are could be used for formatting of time axis.  It is an array of objects, each of objects has two keys:  'type' with value of `intervalType` and 'multipliers' with array of values for `intervalMultiplier`.
+
+      @intervalsProgression: [
+        {type: 'millisecond', multipliers: [1, 5, 10, 50, 100, 500]}
+        {type: 'second', multipliers: [1, 5, 15, 30]}
+        {type: 'minute', multipliers: [1, 5, 15, 30]}
+        {type: 'hour', multipliers: [1, 3, 6, 12]}
+        {type: 'day', multipliers: [1]}
+        {type: 'week', multipliers: [1]}
+        {type: 'month', multipliers: [1, 3, 6]}
+        {type: 'year', multipliers: [1, 5, 10, 50, 100, 500, 1000, 5000, 10000
+          50000, 100000, 1000000, 10000000, 100000000]}
+      ]
 
 ### The `TimeAxisRenderer` class ####
 
@@ -508,7 +596,7 @@ This simple code displays time axis when html page is loaded, in `timeline` canv
         intervalMultiplier: 1
       start = new Date('2015-06-15T00:00:00')
       end = new Date('2015-07-13T15:23:49')
-      axisData = timeAxisMaker.formatTimeAxis {start, end}, canvas.width
+      axisData = timeAxisMaker.formatAutomatic {start, end}, canvas.width
       timeAxisRedrerer = new TimeAxisRenderer()
       timeAxisRedrerer.renderToCanvas axisData, canvas, 0, 15
 
@@ -544,7 +632,7 @@ Now we calculate how much time we should move.
 And render it again.
 
           recleanCanvas()
-          axisData = timeAxisMaker.formatTimeAxis {start, end}, canvas.width
+          axisData = timeAxisMaker.formatAutomatic {start, end}, canvas.width
           timeAxisRedrerer.renderToCanvas axisData, canvas, 0, 15
 
 The same for mouse wheel:  we change `intervalLength` when wheel is scrolled.  We keep the same time value under mouse pointer before and after zooming.  This is done by multiplying interval before point and after point by zooming multiplier.  So if mouse point has time P and our interval is _(P - A, P + B)_ it becomes after zoom _(P - A*m, P + B*m)_, where _m_ is the multiplier.
@@ -567,7 +655,7 @@ In the next line we subtract `0.5` to correct mouse x offset, though it is stran
           end = new Date(mousePoint + rightInterval)
 
           recleanCanvas()
-          axisData = timeAxisMaker.formatTimeAxis {start, end}, canvas.width
+          axisData = timeAxisMaker.formatAutomatic {start, end}, canvas.width
           timeAxisRedrerer.renderToCanvas axisData, canvas, 0, 15
 
 We run the `makeDemo` function when page loads.
@@ -603,7 +691,9 @@ Want to ask a question?  Write to [Eugene](https://github.com/nasedil/)!
 No references so far.
 
 ### Notes related to only this file ###
-Well, no notes yet.
+
+Several ideas:
+ * What if instead of calculating formatting from scratch each time, change it from current?
 
 ### Notes that should be moved away at some point ###
 
