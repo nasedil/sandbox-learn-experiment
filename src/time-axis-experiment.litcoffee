@@ -4,7 +4,7 @@ Timeline axis in CoffeeScript
 Abstract
 --------
 
-This file contains an experimental implementation of time axis visualization in literate CoffeeScript.  Description is followed by source code with explanations and small demo examle.
+This file contains an experimental implementation of time axis visualization in literate CoffeeScript.  Description is followed by source code with explanations and small demo examle.  The main classes are exported as a Node module.
 
 Table of Contents
 -----------------
@@ -15,6 +15,7 @@ Table of Contents
  4. [Library implementation](#library-implementation)
     1. [The `TimeAxisMaker` class](#the-timeaxismaker-class)
     2. [The `TimeAxisRenderer` class](#the-timeaxisrenderer-class)
+    3. [Node module exports](#node-module-exports)
  5. [Library tests](#library-tests)
  6. [Examples](#examples)
  7. [Information](#information)
@@ -646,6 +647,16 @@ This function may be used to avoud aliasing of lines, especially on low-resoluti
       roundForCanvas: (coord) ->
         0.5 + Math.round(coord-0.5)
 
+### Node module exports
+
+Both `TimeAxisMaker` and `TimeAxisRenderer` are exported.
+
+We temporarily disable it.
+
+    #module.exports =
+      #TimeAxisMaker: TimeAxisMaker
+      #TimeAxisRenderer: TimeAxisRenderer
+
 Library tests
 -------------
 
@@ -760,7 +771,9 @@ In the next line we subtract `0.5` to correct mouse x offset, though it is stran
 
 We run the `makeDemo` function when page loads.
 
-    window.onload = makeDemo
+__TODO__:  we need to put example in another file.
+
+    #window.onload = makeDemo
 
 ------------------------------------------------------------
 
