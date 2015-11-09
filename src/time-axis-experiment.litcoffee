@@ -372,6 +372,7 @@ Now we move forwart until we find the right point:
               leftTime = nextTime if nextTime <= start
           when 'hour'
             leftTime.setHours 0, 0, 0, 0
+            nextTime = leftTime
             while nextTime < start
               nextTime = @findNextPoint leftTime
               leftTime = nextTime if nextTime <= start
@@ -380,7 +381,8 @@ Now we move forwart until we find the right point:
               start.getMinutes() % @options.intervalMultiplier
             leftTime.setMinutes newMinutes, 0, 0
           when 'second'
-            leftTime.setSeconds start.getSeconds(), 0
+            leftTime.setSeconds 0, 0
+            nextTime = leftTime
             while nextTime < start
               nextTime = @findNextPoint leftTime
               leftTime = nextTime if nextTime <= start
@@ -773,7 +775,7 @@ We run the `makeDemo` function when page loads.
 
 __TODO__:  we need to put example in another file.
 
-    #window.onload = makeDemo
+    window.onload = makeDemo
 
 ------------------------------------------------------------
 
