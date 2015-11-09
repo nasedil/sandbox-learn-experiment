@@ -145,6 +145,7 @@ Another option, `options.intervalMultiplier`, says how many of such intervals ar
 Text labels can be basically displayed in two ways.  The first one is to put label right under the tick, so that lable corresponds to time or date at this point.  Another way is to put label between ticks so that it corresponds to time interval between these two ticks.  For me it seems quite rational to use the first way to show times, and the second way to show days, months and years;  this is in case of general timeline, that we can move and zoom, and without a need to highlight particular dates.  To clarify what we mean we can consider a typical time axis in pretty much any library these days.  When zoomed out a lot, it usually shows ticks at times like 00:00, at first day of month or a year.  This is pretty logical.  But then, usually a label is shown under such tick, for examle a label of a month that starts at this point of time.  Which doesn't make much sense, because a month is a period.  When we say 'in November', we usually mean 'some time between start and end of November' (unlike when we say 'at 3', which usually means 'at 3:00').  But if the label is under 00:00 of 1st of November, it looks for a viewer like november corresponds to some time from mid-October to mid-November.  Which is very confusing and misleading too.  On the other side, showing the 'November' label in the middle of November on an axis corrects this.  This is a motivation for making two types of label positioning in our timeline implementation:  _point_ and _interval_.  They are determined by `options.labelPlacement` ('point' or 'interval').
 
 The exported methods of the class are:
+ * `formatMultiLaneAxis()`:  builds ticks and labels in several lanes, so that it is possible to see exactly which interval is displayed;  each lane shows ticks and labels for different interval types (time (up to hours), days, months, years).  Up to four lanes are displayed then.
  * `formatAutomatic()`:  builds ticks and labels while automatically deciding what to display.  Only desired label/tick tightness is supplied as an option.
  * `formatFixed()`:  builds ticks and labels with manual setting of parameters.  It should not be used directly, but by other methods, that will be written later.  Is used by `formatAutomatic()`.
 
@@ -160,8 +161,10 @@ When an object of the class is created, the `options` parameter is passed to it,
  * `options.labelPlacement`:  'point' or 'interval';  the first is for putting text labels under corresponding ticks, the second is for putting text labels between ticks (that is under intervals).
  * `options.intervalMultiplier`:  number of base intervals that should be skipped between consequent ticks (for example, 3 or 6; could mean 3 or 6 hours, months distance between ticks).
  * `options.tickTailRatio`:  relative size of a tick upwards (so the length of the tick upwards will be `tickTailRatio * tickLength`).
+ * `options.tickLaneMultiplier`:  how much tick length is multiplied while on next lane from current lane.
  * `options.axisLineOffset`:  absolute offset downwards of the axis line.
  * `options.labelOffset`:  absolute offset downwards of labels.  A label is drawn centered horisontally and with 'top' baseline.
+ * `options.laneOffset`: absolute offset between lanes.
 
 If some of these options are missing, defaults are supplied:
 
@@ -169,13 +172,65 @@ If some of these options are missing, defaults are supplied:
         @options =
           tickLength: options.tickLength ? 10
           tickTailRatio: options.tickTailRatio ? 0.2
+          tickLaneMultiplier: options.tickLaneMultiplier ? 1.5
           axisLineOffset: options.axisLineOffset ? 0.0
           intervalType: options.intervalType ? 'year'
           labelPlacement: options.labelPlacement ? 'point'
           intervalMultiplier: options.intervalMultiplier ? 1
           labelOffset: options.labelOffset ? 12
+          laneOffset: options.laneOffset ? 30
 
 _Note_:  I wonder if the code above that assigns default values could be improved.
+
+#### The `formatMultiLaneAxis()` function ####
+
+This function makes axis look like several axes stacked together, from smaller time intervals to larger, until years are shown.  That makes it complete, providing full information about the corresponding time interval.  It's arguments and return value are the same as for `formatAutomatic()`.
+
+      formatMultiLaneAxis: (interval, width, tightness = 5) ->
+        {@start, end} = interval
+        @intervalLength = end - @start
+        @width = width
+
+__TODO__:  fix saving options.
+
+        oldAxisLineOffset = @options.axisLineOffset
+
+In the beginning we format the first lane using `formatAutomatic()`:
+
+        features = @formatAutomatic interval, width, tightness
+
+Then, we need to format lanes one by one, increasing interval type, until we it is equal to 'years'.  `intervalMultiplier` will be equal to one always on these lanes.
+
+__Note__:  switch could be changed to some array progression, should it be done?
+
+        @options.intervalMultiplier = 1
+        @options.labelPlacement = 'interval'
+        while @options.intervalType isnt 'year'
+
+We increase interval to the next interval type interval.
+
+          switch @options.intervalType
+            when 'millisecond', 'second', 'minute', 'hour'
+              @options.intervalType = 'day'
+            when 'day', 'week'
+              @options.intervalType = 'month'
+            when 'month'
+              @options.intervalType = 'year'
+
+Now we format a lane using the new interval type and multiplier, and after changing placement options.  New data is merged with previous data.
+
+__Note__:  merging code should be done in some other function. Refactor.
+
+          @options.axisLineOffset += @options.laneOffset
+          newLane = @formatFixed interval, width
+          features =
+            lines: features.lines.concat newLane.lines
+            textLabels: features.textLabels.concat newLane.textLabels
+
+__TODO__:  these horrible options restoration shoud be rewritten with the whole otpions and argument system.
+
+        @options.axisLineOffset = oldAxisLineOffset
+        features
 
 #### The `formatAutomatic()` function ####
 
@@ -245,8 +300,8 @@ Now, when we have found the list of time points, we need to construct a dictiona
           {
             x1: @timeToCoord timePoint
             x2: @timeToCoord timePoint
-            y1: -@options.tickLength * @options.tickTailRatio
-            y2: @options.tickLength
+            y1: @options.axisLineOffset + -@options.tickLength * @options.tickTailRatio
+            y2: @options.axisLineOffset + @options.tickLength
           }
 
 We also add axis (a horizontal line).  It spans the whole width of the given interval.
@@ -267,7 +322,7 @@ To do it we first make a list of text labels assuming point label placement.
         textLabels = for timePoint in pointList
           {
             x: @timeToCoord timePoint
-            y: @options.labelOffset
+            y: @options.axisLineOffset + @options.labelOffset
             text: @formatLabel timePoint, @options
           }
 
@@ -695,12 +750,7 @@ This simple code displays time axis when html page is loaded, in `timeline` canv
     makeDemo = ->
       canvas = document.getElementById 'timeline'
       recleanCanvas()
-      timeAxisMaker = new TimeAxisMaker
-        tickLength: 25
-        intervalType: 'day'
-        labelPlacement: 'interval'
-        intervalMultiplier: 1
-        labelOffset: 29
+      timeAxisMaker = new TimeAxisMaker({})
       start = new Date('2015-06-15T00:00:00')
       end = new Date('2015-07-13T15:23:49')
       timeAxisRedrerer = new TimeAxisRenderer()
@@ -708,7 +758,7 @@ This simple code displays time axis when html page is loaded, in `timeline` canv
 Code that draws builds and draws axis is also moved in a function:
 
       makeAxis = ->
-        axisData = timeAxisMaker.formatAutomatic {start, end}, canvas.width, 15
+        axisData = timeAxisMaker.formatMultiLaneAxis {start, end}, canvas.width, 15
         timeAxisRedrerer.renderToCanvas axisData, canvas, 0, 15
 
 Initial drawing:
