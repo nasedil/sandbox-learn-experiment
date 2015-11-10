@@ -16,6 +16,7 @@ Table of Contents
     1. [The `TimeAxisMaker` class](#the-timeaxismaker-class)
     2. [The `TimeAxisRenderer` class](#the-timeaxisrenderer-class)
     3. [Node module exports](#node-module-exports)
+    4. [Helper code](#helper-code)
  5. [Library tests](#library-tests)
  6. [Examples](#examples)
  7. [Information](#information)
@@ -377,13 +378,19 @@ It returns a `Date` object.
 
       findLeftTime: (start) ->
 
-To calculate such value for years and months we just truncate them, while for days and weeks we will count from a fixed origin day near Epoch (Monday 5 January 1970), so that any day intervals are independent from underlying months and years.  That also means that in case of months the `options.intervalMultiplier` should be equal to 1, 2, 3, 4 or 6 to be displayed correctly.  To calculate number of days or weeks (reduced to 7 calculation for 7 days) from origin day we use binary subtracting, starting from huge multiplier equal to 1048576 (roughly 2800/11200 years), going down to base multiplier equal to 1.  For interval types smaller or equal than hours we use the `findNextPoint()` function by incrementing local origin (the interval values like years, months, and days are kept the same, while everything smaller is reset to 0).  This is done to avoid problems with daylight-saving and similar issues.  In `findNextPoint()` we make sure that edge points are consistent while using different values of `start` (for example on 02-00 before daylight-saving and 02-00 after daylight-saving on the same day both lead to the same next point if `options.intervalMultiplier` is larger than 1).
+To calculate such value for years and months we just truncate them, while for days and weeks we will count from a fixed origin day near Epoch (Monday 5 January 1970), so that any day intervals are independent from underlying months and years.  That also means that in case of months the `options.intervalMultiplier` should be equal to 1, 2, 3, 4 or 6 to be displayed correctly.  To calculate number of days or weeks (week is just 7 days) from origin day we use binary subtracting, starting from huge multiplier equal to 1048576 (roughly 2800/11200 years), going down to base multiplier equal to 1.  For interval types smaller or equal than hours we use the `findNextPoint()` function by incrementing local origin (the interval values like years, months, and days are kept the same, while everything smaller is reset to 0).  This is done to avoid problems with daylight-saving and similar issues.  In `findNextPoint()` we make sure that edge points are consistent while using different values of `start` (for example on 02-00 before daylight-saving and 02-00 after daylight-saving on the same day both lead to the same next point if `options.intervalMultiplier` is larger than 1).
+
+A special consideration is negative dates and dates before Epoch.  We need to treat them correctly too.  Arithmetic remainder function in JavaScript return negative remainder if dividend is negative.  Because of that we add divisor to such remainder in case of negative years.
+
+But if dates are outside of allowed by JavaScript ranges (±1000000000 dates from Epoch) then the behaviour is not defined.
 
         leftTime = new Date start.getTime()
         switch @options.intervalType
           when 'year'
-            newYear = start.getFullYear() -
-              start.getFullYear() % @options.intervalMultiplier
+            yearReminder = start.getFullYear() % @options.intervalMultiplier
+            if yearReminder < 0
+              yearReminder += @options.intervalMultiplier
+            newYear = start.getFullYear() - yearReminder
             leftTime.setFullYear newYear, 0, 1
             leftTime.setHours 0, 0, 0, 0
           when 'month'
@@ -713,6 +720,8 @@ We temporarily disable it.
     #module.exports =
       #TimeAxisMaker: TimeAxisMaker
       #TimeAxisRenderer: TimeAxisRenderer
+
+### Helper code
 
 Library tests
 -------------
