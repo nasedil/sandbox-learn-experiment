@@ -49,10 +49,10 @@ This simple code displays time axis when html page is loaded, in `timeline` canv
     makeDemo = ->
       canvas = document.getElementById 'timeline'
       recleanCanvas()
-      timeAxisMaker = new TimeAxisMaker({})
+      timeAxisMaker = new TimelineScale.TimeAxisMaker({})
       start = new Date('2015-06-15T00:00:00')
       end = new Date('2015-07-13T15:23:49')
-      timeAxisRedrerer = new TimeAxisRenderer()
+      timeAxisRedrerer = new TimelineScale.TimeAxisRenderer()
 
 Code that draws builds and draws axis is also moved in a function:
 

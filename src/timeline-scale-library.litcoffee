@@ -15,7 +15,7 @@ Table of Contents
  4. [Library implementation](#library-implementation)
     1. [The `TimeAxisMaker` class](#the-timeaxismaker-class)
     2. [The `TimeAxisRenderer` class](#the-timeaxisrenderer-class)
-    3. [Node module exports](#node-module-exports)
+    3. [Exports](#exports)
     4. [Helper code](#helper-code)
  5. [Library tests](#library-tests)
  6. [Examples](#examples)
@@ -711,18 +711,20 @@ This function may be used to avoud aliasing of lines, especially on low-resoluti
       roundForCanvas: (coord) ->
         0.5 + Math.round(coord-0.5)
 
-### Node module exports
+### Exports
 
 Both `TimeAxisMaker` and `TimeAxisRenderer` are exported.
 
-We temporarily export to window.
+    library =
+      TimeAxisMaker: TimeAxisMaker
+      TimeAxisRenderer: TimeAxisRenderer
 
-    window.TimeAxisMaker = TimeAxisMaker
-    window.TimeAxisRenderer = TimeAxisRenderer
+We export both as a Node package and as a window property in client, depending on current environment.
 
-    #module.exports =
-      #TimeAxisMaker: TimeAxisMaker
-      #TimeAxisRenderer: TimeAxisRenderer
+    if typeof module isnt "undefined" and module.exports
+      module.exports = library
+    else
+      window.TimelineScale = library
 
 ### Helper code
 
