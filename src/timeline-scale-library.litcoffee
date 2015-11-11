@@ -4,7 +4,7 @@ Timeline Scale Library -- library implementation
 Abstract
 --------
 
-This file contains an implementation of timeline scale visualization in literate CoffeeScript.  Description is followed by source code with explanations.  The library is exported both as a Node module and client-side library.  For more information about this library, have a look at the [readme file](readme.md).
+This file contains an implementation of timeline scale visualization in literate CoffeeScript.  Description is followed by source code with explanations.  The library is exported both as a Node module and client-side library.  For more information about this library, have a look at the [readme file](../README.md).
 
 Table of Contents
 -----------------

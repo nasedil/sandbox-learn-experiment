@@ -4,7 +4,7 @@ Timeline Scale Library -- a simple example
 Abstract
 --------
 
-This file contains an example that uses timeline scale visualization in literate CoffeeScript.  Description is followed by source code with explanations.  The example uses [timeline-scale-library](src/timeline-scale-library.litcoffee).  For more information about this library, have a look at the [readme file](readme.md).
+This file contains an example that uses timeline scale visualization in literate CoffeeScript.  Description is followed by source code with explanations.  The example uses [timeline-scale-library](src/timeline-scale-library.litcoffee).  For more information about this library, have a look at the [readme file](../README.md).
 
 Table of Contents
 -----------------
