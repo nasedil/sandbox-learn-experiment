@@ -1,0 +1,31 @@
+{
+  "name": "timeline-scale",
+  "version": "1.0.0-alpha.1",
+  "description": "Timeline Scale Builder library.",
+  "main": "build/lib/timeline-scale-library.js",
+  "files": [
+    "build", "src", "README.md", "build.sh", "watch.sh"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublish": "bash build.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nasedil/sandbox-learn-experiment.git"
+  },
+  "keywords": [
+    "time axis", "timeline", "time scale"
+  ],
+  "devDependencies": {
+    "coffeescript": "^1.10.0",
+    "jade": "^1.11.0"
+  },
+  "author": "Eugene Petkevich <nasedil.genio.1@gmail.com> (http://github.com/nasedil)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nasedil/sandbox-learn-experiment/issues",
+    "email": "nasedil.genio.1@gmail.com"
+  },
+  "homepage": "https://github.com/nasedil/sandbox-learn-experiment"
+}
