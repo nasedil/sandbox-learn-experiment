@@ -1,10 +1,10 @@
-Timeline axis in CoffeeScript
-=============================
+Timeline Scale Library -- library implementation
+================================================
 
 Abstract
 --------
 
-This file contains an experimental implementation of time axis visualization in literate CoffeeScript.  Description is followed by source code with explanations and small demo examle.  The main classes are exported as a Node module.
+This file contains an implementation of timeline scale visualization in literate CoffeeScript.  Description is followed by source code with explanations.  The library is exported both as a Node module and client-side library.  For more information about this library, have a look at the [readme file](readme.md).
 
 Table of Contents
 -----------------
@@ -728,3 +728,49 @@ We temporarily export to window.
 
 Library tests
 -------------
+
+------------------------------------------------------------
+
+Examples
+--------
+You can have a look at an example in [demo.jade](src/demo.jade) (needs to be compiled with Jade) and [timeline-library-example.litcoffee](src/timeline-scale-example.litcoffee).
+
+Information
+-----------
+
+### Authors ###
+Eugene Petkevich, https://github.com/nasedil/
+
+### License ###
+TODO Decide on license.
+
+### Frequently Asked Questions ###
+Want to ask a question?  Write to [Eugene](https://github.com/nasedil/)!
+
+### Version history ###
+Still in alpha.
+
+Notes
+-----
+
+### Dictionary ###
+
+The following terms are routinely used in this file:
+ * _edge time point_:  a point of time that is usually displayed on time axis using tick and/or label;  usually the right part of time is all zeroed (like 0 seconds; 0 minutes and seconds; 0 hours, minutes and seconds), and the rightmost non-zero value is a round number or is a mid-point (or several thirds, fourth, fifth, etc) of a time interval (for example 5 years; 3, or 6, or 12 hours; 30 minutes), or just an integer number.  The typical progression of edge time points would be:  00:05:00, 00:10:00, 00:15:00, 00:20:00, 00:25:00, ...
+
+### References
+No references so far.
+
+### Notes related to only this file ###
+
+Several ideas:
+ * What if instead of calculating formatting from scratch each time, change it from current?
+
+### Notes that should be moved away at some point ###
+
+These notes are currently a draft of coding style, tricks and ideas that could be used in every CoffeeScript file.
+
+Important notes:
+ * Between a bullet list and code block there should be at lest 2 empty lines, otherwise code is not formatted correctly in Github.  However, it compiles without problem and works as it should.  This is probably a Github's bug. __Update__:  it seems that it doesn't work at all in github, something should be between a bullet list and a code block, otherwise github does not show code as code.  I will send a question to support@github.com
+ * Use 60 dashes to include a horizontal line.  That makes horizontal line easily viewable in an editor too.
+ * Limit line to 79 characters, at least code (text could be soft-wrapped).  That improves readability, even though screens are large these times.  Also it makes possible to view several documents on one screen.

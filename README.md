@@ -1,6 +1,10 @@
-# sandbox-learn-experiment
-Everything together for learning new things
+Timeline Scale Library
+======================
 
-In this repository I will experiment while learning new things.
+The library is intended to be used in cases when a beautiful, readable and informative time scale is needed.  For charts, timelines and similar.
 
-1. CoffeeScript
+Explanation and code can be seen in [library implementation](src/timeline-scale-library.litcoffee).  Everything is written in literate CoffeeScript.
+
+An example that uses library functionality is in [demo.jade](src/demo.jade) (needs to be compiled with Jade) and [timeline-library-example.litcoffee](src/timeline-scale-example.litcoffee).
+
+Code is maintained by [Eugene Petkevich](https://github.com/nasedil).  Please don't hesitate to write any questions and add issues in [issue tracker](https://github.com/nasedil/sandbox-learn-experiment/issues).
