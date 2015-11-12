@@ -6,6 +6,8 @@ Abstract
 
 This file contains an example that uses timeline scale visualization in literate CoffeeScript.  Description is followed by source code with explanations.  The example uses [timeline-scale-library](src/timeline-scale-library.litcoffee).  For more information about this library, have a look at the [readme file](../README.md).
 
+The project is hosted [here](https://github.com/nasedil/timeline-scale).  This project is licensed under the terms of the MIT license.
+
 Table of Contents
 -----------------
 

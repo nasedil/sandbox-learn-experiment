@@ -6,6 +6,8 @@ Abstract
 
 This file contains an implementation of timeline scale visualization in literate CoffeeScript.  Description is followed by source code with explanations.  The library is exported both as a Node module and client-side library.  For more information about this library, have a look at the [readme file](../README.md).
 
+The project is hosted [here](https://github.com/nasedil/timeline-scale).  This project is licensed under the terms of the MIT license.
+
 Table of Contents
 -----------------
 
