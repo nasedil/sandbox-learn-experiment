@@ -151,7 +151,7 @@ Text labels can be basically displayed in two ways.  The first one is to put lab
 
 The exported methods of the class are:
  * `formatMultiLaneAxis()`:  builds ticks and labels in several lanes, so that it is possible to see exactly which interval is displayed;  each lane shows ticks and labels for different interval types (time (up to hours), days, months, years).  Up to four lanes are displayed then.
- * `formatAutomatic()`:  builds ticks and labels while automatically deciding what to display.  Only desired label/tick tightness is supplied as an option.
+ * `formatAutomatic()`:  builds ticks and labels while automatically deciding what to display.
  * `formatFixed()`:  builds ticks and labels with manual setting of parameters.  It should not be used directly, but by other methods, that will be written later.  Is used by `formatAutomatic()`.
 
 The class definition start:
@@ -161,6 +161,9 @@ The class definition start:
 #### The `TimeAxisMaker()` constructor ####
 
 When an object of the class is created, the `options` parameter is passed to it, which is a dictionary with values that are needed for formatting timeline:
+ * `tightness`:  a number that guides how tightly should be positioned ticks and labels.  Larger values mean more ticks and labels in the same interval.
+
+  __Note__:  in the current implementation this number correspoinds to a maximal number of labels shown.
  * `options.tickLength`:  length (in pixels) of tick from baseline downwards.
  * `options.intervalType`:  base interval that is displayed (should be integral); can be on of 'year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'millisecond'.
  * `options.labelPlacement`:  'point' or 'interval';  the first is for putting text labels under corresponding ticks, the second is for putting text labels between ticks (that is under intervals).
@@ -175,6 +178,7 @@ If some of these options are missing, defaults are supplied:
 
       constructor: (options) ->
         @options =
+          tightness: options.tightness ? 5
           tickLength: options.tickLength ? 10
           tickTailRatio: options.tickTailRatio ? 0.2
           tickLaneMultiplier: options.tickLaneMultiplier ? 1.5
@@ -185,13 +189,13 @@ If some of these options are missing, defaults are supplied:
           labelOffset: options.labelOffset ? 12
           laneOffset: options.laneOffset ? 30
 
-_Note_:  I wonder if the code above that assigns default values could be improved.
+_Note_:  I wonder if the code above that assigns default values could be improved.  Maybe use [underscore extend](http://underscorejs.org/#extend).
 
 #### The `formatMultiLaneAxis()` function ####
 
 This function makes axis look like several axes stacked together, from smaller time intervals to larger, until years are shown.  That makes it complete, providing full information about the corresponding time interval.  It's arguments and return value are the same as for `formatAutomatic()`.
 
-      formatMultiLaneAxis: (interval, width, tightness = 5) ->
+      formatMultiLaneAxis: (interval, width = 5) ->
         {@start, end} = interval
         @intervalLength = end - @start
         @width = width
@@ -202,7 +206,7 @@ __TODO__:  fix saving options.
 
 In the beginning we format the first lane using `formatAutomatic()`:
 
-        features = @formatAutomatic interval, width, tightness
+        features = @formatAutomatic interval, width
 
 Then, we need to format lanes one by one, increasing interval type, until we it is equal to 'years'.  `intervalMultiplier` will be equal to one always on these lanes.
 
@@ -241,24 +245,23 @@ __TODO__:  these horrible options restoration shoud be rewritten with the whole 
 
 A function that formats time axis.  It is done in two steps:  deciding which _edge time points_ should be used for formatting, and actual formatting.  The second step is done in the `formatFixed()` function.  The first step is done here.
 
-It has two arguments:
+It has the following arguments:
  * `interval`:  a dictionary with `start` and `end` values, each of `Date` type.
  * `width`:  the corresponding to that interval width of a viewport.
- * `tightness`:  a number that guides how tightly should be positioned ticks and labels.  Larger values mean more ticks and labels in the same interval.  __Note__:  in the current implementation this number correspoinds to a maximal number of labels shown.
 
 It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
 
-      formatAutomatic: (interval, width, tightness = 5) ->
+      formatAutomatic: (interval, width) ->
         {@start, end} = interval
         @intervalLength = end - @start
         @width = width
 
-To decide which interval between _edge time points_ should be used, we increase that interval until we have no more points than is allowed by `tightness`.  Intervals between edge points are defined by a combination of `intervalType` and `intervalMultiplier`.  We store such combinations in the `TimeAxisMaker.intervalsProgression` structure.  We put code that calculates approximate interval between time points for such a combination into the function `TimeAxisMaker.findNominalInterval()` (this is because we can have 28 to 31 days in a month etc).
+To decide which interval between _edge time points_ should be used, we increase that interval until we have no more points than is allowed by `@options.tightness`.  Intervals between edge points are defined by a combination of `intervalType` and `intervalMultiplier`.  We store such combinations in the `TimeAxisMaker.intervalsProgression` structure.  We put code that calculates approximate interval between time points for such a combination into the function `TimeAxisMaker.findNominalInterval()` (this is because we can have 28 to 31 days in a month etc).
 
         intervalTypeIndex = 0
         intervalMultiplierIndex = 0
         currentStepInterval = TimeAxisMaker.findNominalInterval(TimeAxisMaker.intervalsProgression[intervalTypeIndex].type, TimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers[intervalMultiplierIndex])
-        while currentStepInterval * tightness < @intervalLength
+        while currentStepInterval * @options.tightness < @intervalLength
           intervalMultiplierIndex += 1
           if intervalMultiplierIndex >= TimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers.length
             intervalTypeIndex += 1
@@ -328,7 +331,7 @@ To do it we first make a list of text labels assuming point label placement.
           {
             x: @timeToCoord timePoint
             y: @options.axisLineOffset + @options.labelOffset
-            text: @formatLabel timePoint, @options
+            text: @formatLabel timePoint
           }
 
 Then, if `options.labelPlacement` is equal to 'interval', we remove the last item and adjust horizontal coordinates of other items.
@@ -559,15 +562,15 @@ Return value is in milliseconds.
 
 __Note__:  should we optimize it here (both precalculate numbers and deduplicate code)?
 
-#### The `formatLabel` function ####
+#### The `formatLabel()` function ####
 
 This function returns text representation of date.
 
-      formatLabel: (timePoint, options) ->
-        switch options.intervalType
+      formatLabel: (timePoint) ->
+        switch @options.intervalType
           when 'year'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setFullYear(nextTimePoint.getFullYear() - 1)
               timePoint.getFullYear().toString() +
@@ -575,8 +578,8 @@ This function returns text representation of date.
             else
               timePoint.getFullYear().toString()
           when 'month'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setMonth(nextTimePoint.getMonth() - 1)
               timePoint.getMonth().toString() +
@@ -584,7 +587,7 @@ This function returns text representation of date.
             else
               timePoint.getMonth().toString()
           when 'week'
-            if options.labelPlacement is 'interval'
+            if @options.labelPlacement is 'interval'
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setDate(nextTimePoint.getDate() - 1)
               timePoint.getDate().toString() +
@@ -592,8 +595,8 @@ This function returns text representation of date.
             else
               timePoint.getDate().toString()
           when 'day'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setDate(nextTimePoint.getDate() - 1)
               timePoint.getDate().toString() +
@@ -601,8 +604,8 @@ This function returns text representation of date.
             else
               timePoint.getDate().toString()
           when 'hour'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setHours(nextTimePoint.getHours())
               timePoint.getHours().toString() +
@@ -610,8 +613,8 @@ This function returns text representation of date.
             else
               timePoint.getHours().toString()
           when 'minute'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setMinutes(nextTimePoint.getMinutes())
               timePoint.getMinutes().toString() +
@@ -619,8 +622,8 @@ This function returns text representation of date.
             else
               timePoint.getMinutes().toString()
           when 'second'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setSeconds(nextTimePoint.getSeconds())
               timePoint.getSeconds().toString() +
@@ -628,8 +631,8 @@ This function returns text representation of date.
             else
               timePoint.getSeconds().toString()
           when 'millisecond'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setMilliseconds(nextTimePoint.getMilliseconds())
               ".#{ timePoint.getMilliseconds() }–.#{ nextTimePoint.getMilliseconds() }"

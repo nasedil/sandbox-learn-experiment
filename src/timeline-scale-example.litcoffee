@@ -61,7 +61,7 @@ This simple code displays time axis when html page is loaded, in `timeline` canv
 Code that draws builds and draws axis is also moved in a function:
 
       makeAxis = ->
-        axisData = timeAxisMaker.formatMultiLaneAxis {start, end}, canvas.width, 15
+        axisData = timeAxisMaker.formatMultiLaneAxis {start, end}, canvas.width
         timeAxisRedrerer.renderToCanvas axisData, canvas, 0, 15
 
 Initial drawing:
