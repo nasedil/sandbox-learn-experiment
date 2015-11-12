@@ -331,7 +331,7 @@ To do it we first make a list of text labels assuming point label placement.
           {
             x: @timeToCoord timePoint
             y: @options.axisLineOffset + @options.labelOffset
-            text: @formatLabel timePoint, @options
+            text: @formatLabel timePoint
           }
 
 Then, if `options.labelPlacement` is equal to 'interval', we remove the last item and adjust horizontal coordinates of other items.
@@ -562,15 +562,15 @@ Return value is in milliseconds.
 
 __Note__:  should we optimize it here (both precalculate numbers and deduplicate code)?
 
-#### The `formatLabel` function ####
+#### The `formatLabel()` function ####
 
 This function returns text representation of date.
 
-      formatLabel: (timePoint, options) ->
-        switch options.intervalType
+      formatLabel: (timePoint) ->
+        switch @options.intervalType
           when 'year'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setFullYear(nextTimePoint.getFullYear() - 1)
               timePoint.getFullYear().toString() +
@@ -578,8 +578,8 @@ This function returns text representation of date.
             else
               timePoint.getFullYear().toString()
           when 'month'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setMonth(nextTimePoint.getMonth() - 1)
               timePoint.getMonth().toString() +
@@ -587,7 +587,7 @@ This function returns text representation of date.
             else
               timePoint.getMonth().toString()
           when 'week'
-            if options.labelPlacement is 'interval'
+            if @options.labelPlacement is 'interval'
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setDate(nextTimePoint.getDate() - 1)
               timePoint.getDate().toString() +
@@ -595,8 +595,8 @@ This function returns text representation of date.
             else
               timePoint.getDate().toString()
           when 'day'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setDate(nextTimePoint.getDate() - 1)
               timePoint.getDate().toString() +
@@ -604,8 +604,8 @@ This function returns text representation of date.
             else
               timePoint.getDate().toString()
           when 'hour'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setHours(nextTimePoint.getHours())
               timePoint.getHours().toString() +
@@ -613,8 +613,8 @@ This function returns text representation of date.
             else
               timePoint.getHours().toString()
           when 'minute'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setMinutes(nextTimePoint.getMinutes())
               timePoint.getMinutes().toString() +
@@ -622,8 +622,8 @@ This function returns text representation of date.
             else
               timePoint.getMinutes().toString()
           when 'second'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setSeconds(nextTimePoint.getSeconds())
               timePoint.getSeconds().toString() +
@@ -631,8 +631,8 @@ This function returns text representation of date.
             else
               timePoint.getSeconds().toString()
           when 'millisecond'
-            if (options.intervalMultiplier > 1 and
-                options.labelPlacement is 'interval')
+            if (@options.intervalMultiplier > 1 and
+                @options.labelPlacement is 'interval')
               nextTimePoint = @findNextPoint timePoint
               nextTimePoint.setMilliseconds(nextTimePoint.getMilliseconds())
               ".#{ timePoint.getMilliseconds() }–.#{ nextTimePoint.getMilliseconds() }"
