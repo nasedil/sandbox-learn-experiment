@@ -8,10 +8,12 @@ This file contains an example that uses timeline scale visualization in literate
 
 The project is hosted [here](https://github.com/nasedil/timeline-scale).  This project is licensed under the terms of the MIT license.
 
+This file is written in Literate [CoffeeScript](http://coffeescript.org/#literate), using [Github Flavored Markdown](https://help.github.com/articles/github-flavored-markdown/).
+
 Table of Contents
 -----------------
 
- 1. [Examples](#examples)
+ 1. [Example implementation](#example-implementation)
  2. [Information](#information)
     1. [Authors](#authors)
     2. [License](#license)
@@ -20,8 +22,8 @@ Table of Contents
 
 ------------------------------------------------------------
 
-Examples
---------
+Example implementation
+----------------------
 
 The following small example is supposed to work together with an html-file that contains a canvas element with `id` equal to 'timeline'.
 
@@ -135,7 +137,10 @@ Information
 Eugene Petkevich, https://github.com/nasedil/
 
 ### License ###
-TODO Decide on license.
+This code is licensed under the terms of the MIT license.
+
+### Technical information ###
+This file is written in Literate [CoffeeScript](http://coffeescript.org/#literate), using [Github Flavored Markdown](https://help.github.com/articles/github-flavored-markdown/).  You need to compile to get javascript code, and it is best highlighted when viewed in Github.
 
 ### Frequently Asked Questions ###
 Want to ask a question?  Write to [Eugene](https://github.com/nasedil/)!
