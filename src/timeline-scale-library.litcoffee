@@ -196,8 +196,8 @@ _Note_:  I wonder if the code above that assigns default values could be improve
 This function makes axis look like several axes stacked together, from smaller time intervals to larger, until years are shown.  That makes it complete, providing full information about the corresponding time interval.  It's arguments and return value are the same as for `formatAutomatic()`.
 
       formatMultiLaneAxis: (interval, width = 5) ->
-        {@start, end} = interval
-        @intervalLength = end - @start
+        {@startTimestamp, endTimestamp} = interval
+        @intervalLength = endTimestamp - @startTimestamp
         @width = width
 
 __TODO__:  fix saving options.
@@ -246,14 +246,14 @@ __TODO__:  these horrible options restoration shoud be rewritten with the whole 
 A function that formats time axis.  It is done in two steps:  deciding which _edge time points_ should be used for formatting, and actual formatting.  The second step is done in the `formatFixed()` function.  The first step is done here.
 
 It has the following arguments:
- * `interval`:  a dictionary with `start` and `end` values, each of `Date` type.
+ * `interval`:  a dictionary with `start` and `end` values, each are _milliseconds from Epoch_.
  * `width`:  the corresponding to that interval width of a viewport.
 
 It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
 
       formatAutomatic: (interval, width) ->
-        {@start, end} = interval
-        @intervalLength = end - @start
+        {@startTimestamp, endTimestamp} = interval
+        @intervalLength = endTimestamp - @startTimestamp
         @width = width
 
 To decide which interval between _edge time points_ should be used, we increase that interval until we have no more points than is allowed by `@options.tightness`.  Intervals between edge points are defined by a combination of `intervalType` and `intervalMultiplier`.  We store such combinations in the `TimeAxisMaker.intervalsProgression` structure.  We put code that calculates approximate interval between time points for such a combination into the function `TimeAxisMaker.findNominalInterval()` (this is because we can have 28 to 31 days in a month etc).
@@ -286,21 +286,21 @@ Now, after we have found right interval, we can call the `formatFixed()` functio
 #### The `formatFixed()` function ####
 
 A function that formats time axis.  It has two arguments:
- * `interval`:  a dictionary with `start` and `end` values, each of `Date` type.
+ * `interval`:  a dictionary with `start` and `end` values, each are _milliseconds from Epoch_.
  * `width`:  the corresponding to that interval width of a viewport.
 
 It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
 
       formatFixed: (interval, width) ->
-        {@start, end} = interval
-        @intervalLength = end - @start
+        {@startTimestamp, endTimestamp} = interval
+        @intervalLength = endTimestamp - @startTimestamp
         @width = width
 
 We can put on axis ticks and labels, and also colour areas between them (but the coloring is not implemented yet).  They correspond to a set of time points.  Labels could correspond to time points or to time intervals between these points.
 
 So we need to build a list of time points that correspond to the given `interval`.  We will put such code in a special function, `findPointList()`.
 
-        pointList = @findPointList @start, end
+        pointList = @findPointList @startTimestamp, endTimestamp
 
 Now, when we have found the list of time points, we need to construct a dictionary with graphical elements.  To transform time value into a horizontal coordinate we use the `timeToCoord()` function.  We start with ticks.  Each tick is a line.  The @options.tickLength parameter is a base length of a tick.  We set tick length from baseline downwards to `@options.tickLength`, and `@options.tickLength * @options.tickTailRatio` upwards.
 
@@ -327,11 +327,11 @@ _Note_:  here we also need to improve formatting, now it's just a quick fix to d
 
 To do it we first make a list of text labels assuming point label placement.
 
-        textLabels = for timePoint in pointList
+        textLabels = for timestamp in pointList
           {
-            x: @timeToCoord timePoint
+            x: @timeToCoord timestamp
             y: @options.axisLineOffset + @options.labelOffset
-            text: @formatLabel timePoint
+            text: @formatLabel timestamp
           }
 
 Then, if `options.labelPlacement` is equal to 'interval', we remove the last item and adjust horizontal coordinates of other items.
@@ -352,23 +352,23 @@ Now we combine all elements into one dictionary and return it;  we store ticks a
 #### The `findPointList()` function ####
 
 This function returns a list of points that are needed to be displayed for an interval.  The following arguments are necessary:
- * `start`:  when the interval starts, `Date` object.
- * `end`:  when the interval ends, `Date` object.
+ * `start`:  when the interval starts, _milliseconds from Epoch_ number.
+ * `end`:  when the interval ends, _milliseconds from Epoch_ number.
 
-It returns a list of `Date` objects.
+It returns a list of _milliseconds from Epoch_ numbers.
 
-      findPointList: (start, end) ->
+      findPointList: (startTimestamp, endTimestamp) ->
 
 Since we could need to display labels between time points, we need to find time points inside the interval (non-inclusive) and one point on left and right side.  We can build the point list by finding the leftmost _edge time point_ which is strictly less than the `start` of the interval.  We move code that does that to the `findLeftTime()` function:
 
-        timePoint = @findLeftTime start
+        timestamp = @findLeftTime startTimestamp
 
 Then, we populate the list in by incrementing points until we reach right end of the interval, using `findNextPoint()` function.  We move to that function code that gives next _edge time point_ for a supplied _edge time point_.
 
-        pointList = [timePoint]
-        until timePoint > end
-          timePoint = @findNextPoint timePoint
-          pointList.push timePoint
+        pointList = [timestamp]
+        until timestamp > endTimestamp
+          timestamp = @findNextPoint timestamp
+          pointList.push timestamp
 
 Then we return the list of time points:
 
@@ -379,11 +379,11 @@ Then we return the list of time points:
 The `findLeftTime()` function calculates the rightmost _edge time point_ for current `options.intervalType` such that it is not greater than a given point of time.
 
 Function arguments:
- * `start`:  a point of time, `Date` object.
+ * `startTimestamp`:  a point of time, _milliseconds from Epoch_ number.
 
 It returns a `Date` object.
 
-      findLeftTime: (start) ->
+      findLeftTime: (startTimestamp) ->
 
 To calculate such value for years and months we just truncate them, while for days and weeks we will count from a fixed origin day near Epoch (Monday 5 January 1970), so that any day intervals are independent from underlying months and years.  That also means that in case of months the `options.intervalMultiplier` should be equal to 1, 2, 3, 4 or 6 to be displayed correctly.  To calculate number of days or weeks (week is just 7 days) from origin day we use binary subtracting, starting from huge multiplier equal to 1048576 (roughly 2800/11200 years), going down to base multiplier equal to 1.  For interval types smaller or equal than hours we use the `findNextPoint()` function by incrementing local origin (the interval values like years, months, and days are kept the same, while everything smaller is reset to 0).  This is done to avoid problems with daylight-saving and similar issues.  In `findNextPoint()` we make sure that edge points are consistent while using different values of `start` (for example on 02-00 before daylight-saving and 02-00 after daylight-saving on the same day both lead to the same next point if `options.intervalMultiplier` is larger than 1).
 
@@ -391,7 +391,8 @@ A special consideration is negative dates and dates before Epoch.  We need to tr
 
 But if dates are outside of allowed by JavaScript ranges (±1000000000 dates from Epoch) then the behaviour is not defined.
 
-        leftTime = new Date start.getTime()
+        leftTime = new Date(startTimestamp)
+        start = new Date(startTimestamp)
         switch @options.intervalType
           when 'year'
             yearReminder = start.getFullYear() % @options.intervalMultiplier
@@ -443,7 +444,7 @@ Now we move forwart until we find the right point:
             leftTime.setHours 0, 0, 0, 0
             nextTime = leftTime
             while nextTime < start
-              nextTime = @findNextPoint leftTime
+              nextTime = @findNextPoint leftTime.getTime()
               leftTime = nextTime if nextTime <= start
           when 'minute'
             newMinutes = start.getMinutes() -
@@ -453,30 +454,34 @@ Now we move forwart until we find the right point:
             leftTime.setSeconds 0, 0
             nextTime = leftTime
             while nextTime < start
-              nextTime = @findNextPoint leftTime
+              nextTime = @findNextPoint leftTime.getTime()
               leftTime = nextTime if nextTime <= start
           when 'millisecond'
             newMilliseconds = start.getMilliseconds() -
               start.getMilliseconds() % @options.intervalMultiplier
             leftTime.setMilliseconds newMilliseconds
-        leftTime
 
 There is code repetition in the switch statement above.  One can think of a good way to improve this part of code.
+
+And return leftTime:
+
+        leftTime.getTime()
 
 #### The `findNextPoint()` function ####
 
 This function calculates next _edge time point_ for current options assuming `timePoint` argument is _edge time point_.  We take care of daylight-saving time and leap seconds here, assuming that at most one hour/minute/second/millisecond is added or subtracted during leap or clock change.  Also we assume that leap or clock change is not happening at time with 0 value, that is something like 00 -> 23 is not happening.
 
 Function arguments:
- * `timePoint`:  current edge time point, `Date` object.
+ * `timestamp`:  current edge time point, _milliseconds from Epoch_ number.
 
 It returns a `Date` object.
 
-      findNextPoint: (timePoint) ->
+      findNextPoint: (timestamp) ->
 
 The algorithm behind the function is simple:  for current `options.intervalType` it increments it by `options.intervalMultiplier` using `Date` methods.  Except for cases when we deal with hours and seconds, where we check if after incremental `options.intervalType` is divisible by `options.intervalMultiplier` (which should be the case).  If not, we adjust to the most suitable value, movinhg back or forward by one hour or second.
 
-        nextTime = new Date timePoint.getTime()
+        nextTime = new Date(timestamp)
+        timePoint = new Date(timestamp)
         switch @options.intervalType
           when 'year'
             nextTime.setFullYear (timePoint.getFullYear() +
@@ -521,12 +526,12 @@ The algorithm behind the function is simple:  for current `options.intervalType`
 To get horizontal coordinate of time point we use `@intervalLength` that we stored in `formatFixed()`, which is equal to the number of milliseconds between `end` and `start` of the interval.  We use it to calculate pixel/time ratio, equal to `@width / @intervalLength`.
 
 Function arguments:
- * `time`:  time point, `Date` object.
+ * `timestamp`:  time point, _milliseconds from Epoch_ number.
 
 It returns a number between 0 and `@width`.
 
-      timeToCoord: (time) ->
-        timeFromStart = time - @start
+      timeToCoord: (timestamp) ->
+        timeFromStart = timestamp - @startTimestamp
         coordinate = timeFromStart * @width / @intervalLength
 
 #### The `findNominalInterval()` function ####
@@ -566,12 +571,17 @@ __Note__:  should we optimize it here (both precalculate numbers and deduplicate
 
 This function returns text representation of date.
 
-      formatLabel: (timePoint) ->
+`timestamp` is a _milliseconds from Epoch_ number.
+
+Returns a string.
+
+      formatLabel: (timestamp) ->
+        timePoint = new Date(timestamp)
         switch @options.intervalType
           when 'year'
             if (@options.intervalMultiplier > 1 and
                 @options.labelPlacement is 'interval')
-              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint = @findNextPoint timePoint.getTime()
               nextTimePoint.setFullYear(nextTimePoint.getFullYear() - 1)
               timePoint.getFullYear().toString() +
                 '–' + nextTimePoint.getFullYear()
@@ -580,7 +590,7 @@ This function returns text representation of date.
           when 'month'
             if (@options.intervalMultiplier > 1 and
                 @options.labelPlacement is 'interval')
-              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint = @findNextPoint timePoint.getTime()
               nextTimePoint.setMonth(nextTimePoint.getMonth() - 1)
               timePoint.getMonth().toString() +
                 '–' + nextTimePoint.getMonth().toString()
@@ -588,7 +598,7 @@ This function returns text representation of date.
               timePoint.getMonth().toString()
           when 'week'
             if @options.labelPlacement is 'interval'
-              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint = @findNextPoint timePoint.getTime()
               nextTimePoint.setDate(nextTimePoint.getDate() - 1)
               timePoint.getDate().toString() +
                 '–' + nextTimePoint.getDate().toString()
@@ -597,7 +607,7 @@ This function returns text representation of date.
           when 'day'
             if (@options.intervalMultiplier > 1 and
                 @options.labelPlacement is 'interval')
-              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint = @findNextPoint timePoint.getTime()
               nextTimePoint.setDate(nextTimePoint.getDate() - 1)
               timePoint.getDate().toString() +
                 '–' + nextTimePoint.getDate().toString()
@@ -606,7 +616,7 @@ This function returns text representation of date.
           when 'hour'
             if (@options.intervalMultiplier > 1 and
                 @options.labelPlacement is 'interval')
-              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint = @findNextPoint timePoint.getTime()
               nextTimePoint.setHours(nextTimePoint.getHours())
               timePoint.getHours().toString() +
                 '–' + nextTimePoint.getHours().toString()
@@ -615,7 +625,7 @@ This function returns text representation of date.
           when 'minute'
             if (@options.intervalMultiplier > 1 and
                 @options.labelPlacement is 'interval')
-              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint = @findNextPoint timePoint.getTime()
               nextTimePoint.setMinutes(nextTimePoint.getMinutes())
               timePoint.getMinutes().toString() +
                 '–' + nextTimePoint.getMinutes().toString()
@@ -624,7 +634,7 @@ This function returns text representation of date.
           when 'second'
             if (@options.intervalMultiplier > 1 and
                 @options.labelPlacement is 'interval')
-              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint = @findNextPoint timePoint.getTime()
               nextTimePoint.setSeconds(nextTimePoint.getSeconds())
               timePoint.getSeconds().toString() +
                 '–' + nextTimePoint.getSeconds().toString()
@@ -633,7 +643,7 @@ This function returns text representation of date.
           when 'millisecond'
             if (@options.intervalMultiplier > 1 and
                 @options.labelPlacement is 'interval')
-              nextTimePoint = @findNextPoint timePoint
+              nextTimePoint = @findNextPoint timePoint.getTime()
               nextTimePoint.setMilliseconds(nextTimePoint.getMilliseconds())
               ".#{ timePoint.getMilliseconds() }–.#{ nextTimePoint.getMilliseconds() }"
             else
