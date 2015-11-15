@@ -18,7 +18,7 @@
     "time axis", "timeline", "time scale"
   ],
   "devDependencies": {
-    "coffeescript": "^1.10.0",
+    "coffee-script": "^1.10.0",
     "jade": "^1.11.0"
   },
   "author": "Eugene Petkevich <nasedil.genio.1@gmail.com> (http://github.com/nasedil)",
