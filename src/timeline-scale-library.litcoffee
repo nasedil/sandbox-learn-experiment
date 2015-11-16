@@ -196,9 +196,9 @@ _Note_:  I wonder if the code above that assigns default values could be improve
 This function makes axis look like several axes stacked together, from smaller time intervals to larger, until years are shown.  That makes it complete, providing full information about the corresponding time interval.  It's arguments and return value are the same as for `formatAutomatic()`.
 
       formatMultiLaneAxis: (interval, width = 5) ->
-        {@startTimestamp, endTimestamp} = interval
-        @intervalLength = endTimestamp - @startTimestamp
-        @width = width
+        {startTimestamp, endTimestamp} = interval
+        intervalLength = endTimestamp - startTimestamp
+        width = width
 
 __TODO__:  fix saving options.
 
@@ -252,16 +252,16 @@ It has the following arguments:
 It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
 
       formatAutomatic: (interval, width) ->
-        {@startTimestamp, endTimestamp} = interval
-        @intervalLength = endTimestamp - @startTimestamp
-        @width = width
+        {startTimestamp, endTimestamp} = interval
+        intervalLength = endTimestamp - startTimestamp
+        width = width
 
 To decide which interval between _edge time points_ should be used, we increase that interval until we have no more points than is allowed by `@options.tightness`.  Intervals between edge points are defined by a combination of `intervalType` and `intervalMultiplier`.  We store such combinations in the `TimeAxisMaker.intervalsProgression` structure.  We put code that calculates approximate interval between time points for such a combination into the function `TimeAxisMaker.findNominalInterval()` (this is because we can have 28 to 31 days in a month etc).
 
         intervalTypeIndex = 0
         intervalMultiplierIndex = 0
         currentStepInterval = TimeAxisMaker.findNominalInterval(TimeAxisMaker.intervalsProgression[intervalTypeIndex].type, TimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers[intervalMultiplierIndex])
-        while currentStepInterval * @options.tightness < @intervalLength
+        while currentStepInterval * @options.tightness < intervalLength
           intervalMultiplierIndex += 1
           if intervalMultiplierIndex >= TimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers.length
             intervalTypeIndex += 1
@@ -292,22 +292,22 @@ A function that formats time axis.  It has two arguments:
 It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
 
       formatFixed: (interval, width) ->
-        {@startTimestamp, endTimestamp} = interval
-        @intervalLength = endTimestamp - @startTimestamp
-        @width = width
+        {startTimestamp, endTimestamp} = interval
+        intervalLength = endTimestamp - startTimestamp
+        width = width
 
 We can put on axis ticks and labels, and also colour areas between them (but the coloring is not implemented yet).  They correspond to a set of time points.  Labels could correspond to time points or to time intervals between these points.
 
 So we need to build a list of time points that correspond to the given `interval`.  We will put such code in a special function, `findPointList()`.
 
-        pointList = @findPointList @startTimestamp, endTimestamp
+        pointList = @findPointList startTimestamp, endTimestamp
 
 Now, when we have found the list of time points, we need to construct a dictionary with graphical elements.  To transform time value into a horizontal coordinate we use the `timeToCoord()` function.  We start with ticks.  Each tick is a line.  The @options.tickLength parameter is a base length of a tick.  We set tick length from baseline downwards to `@options.tickLength`, and `@options.tickLength * @options.tickTailRatio` upwards.
 
         ticks = for timePoint in pointList
           {
-            x1: @timeToCoord timePoint
-            x2: @timeToCoord timePoint
+            x1: @timeToCoord timePoint, startTimestamp, intervalLength, width
+            x2: @timeToCoord timePoint, startTimestamp, intervalLength, width
             y1: @options.axisLineOffset + -@options.tickLength * @options.tickTailRatio
             y2: @options.axisLineOffset + @options.tickLength
           }
@@ -316,7 +316,7 @@ We also add axis (a horizontal line).  It spans the whole width of the given int
 
         axisLine = {
           x1: 0
-          x2: @width
+          x2: width
           y1: @options.axisLineOffset
           y2: @options.axisLineOffset
         }
@@ -329,7 +329,7 @@ To do it we first make a list of text labels assuming point label placement.
 
         textLabels = for timestamp in pointList
           {
-            x: @timeToCoord timestamp
+            x: @timeToCoord timestamp, startTimestamp, intervalLength, width
             y: @options.axisLineOffset + @options.labelOffset
             text: @formatLabel timestamp
           }
@@ -530,9 +530,9 @@ Function arguments:
 
 It returns a number between 0 and `@width`.
 
-      timeToCoord: (timestamp) ->
-        timeFromStart = timestamp - @startTimestamp
-        coordinate = timeFromStart * @width / @intervalLength
+      timeToCoord: (timestamp, startTimestamp, intervalLength, width) ->
+        timeFromStart = timestamp - startTimestamp
+        coordinate = timeFromStart * width / intervalLength
 
 #### The `findNominalInterval()` function ####
 
