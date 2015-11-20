@@ -17,7 +17,7 @@ Table of Contents
  2. [Test cases](#test-cases)
  3. [Development concerns](#development-concerns)
  4. [Library implementation](#library-implementation)
-    1. [The `TimeAxisMaker` class](#the-timeaxismaker-class)
+    1. [The `AutomaticTimeAxisMaker` class](#the-automatictimeaxismaker-class)
     2. [The `TimeAxisRenderer` class](#the-timeaxisrenderer-class)
     3. [Exports](#exports)
     4. [Helper code](#helper-code)
@@ -121,13 +121,13 @@ To make it more flexible to render (to canvas, svg, vega, anything else), we hav
 Library implementation
 ----------------------
 
-Currently the job of visualizing time axis is split into two steps:  building structure of graphical features (such as lines and text labels) and displaying them (for example on html canvas).  The code for these steps is separated, so that an axis may be displayed using different technologies easily (html canvas, png, webgl, ...).  The first step is done using the `TimeAxisMaker` class, and the second step is done using the `TimeAxisRenderer` class.
+Currently the job of visualizing time axis is split into two steps:  building structure of graphical features (such as lines and text labels) and displaying them (for example on html canvas).  The code for these steps is separated, so that an axis may be displayed using different technologies easily (html canvas, png, webgl, ...).  The first step is done using the `AutomaticTimeAxisMaker` or `FixedTimeAxisMaker` class, and the second step is done using the `TimeAxisRenderer` class.
 
-The two functions that are intended to be called are `TimeAxisMaker.formatAutomatic()`, which formats time axis into a dictionary that describes the look of axis, and one of the `TimeAxisRenderer.renderTo...` functions that render that data dictionary to a desired context.
+The functions that are intended to be called are one of the `...TimeAxisMaker.format()` functions, which formats time axis into a dictionary that describes the look of axis, and one of the `TimeAxisRenderer.renderTo...` functions that render that data dictionary to a desired context.
 
-### The `TimeAxisMaker` class ###
+### The `AutomaticTimeAxisMaker` class ###
 
-Since our formatting of time axis involves a lot of calculations, it is separated in several functions, and they are combined in the `TimeAxisMaker` class.
+Since our formatting of time axis involves a lot of calculations, it is separated in several functions, and they are combined in the `AutomaticTimeAxisMaker` class.
 
 All methods that build axes produce a dictionary with the following elements:
  * A list of lines which includes the following:
@@ -156,9 +156,9 @@ The exported methods of the class are:
 
 The class definition start:
 
-    class TimeAxisMaker
+    class AutomaticTimeAxisMaker
 
-#### The `TimeAxisMaker()` constructor ####
+#### The `AutomaticTimeAxisMaker()` constructor ####
 
 When an object of the class is created, the `options` parameter is passed to it, which is a dictionary with values that are needed for formatting timeline:
  * `tightness`:  a number that guides how tightly should be positioned ticks and labels.  Larger values mean more ticks and labels in the same interval.
@@ -196,13 +196,9 @@ _Note_:  I wonder if the code above that assigns default values could be improve
 This function makes axis look like several axes stacked together, from smaller time intervals to larger, until years are shown.  That makes it complete, providing full information about the corresponding time interval.  It's arguments and return value are the same as for `formatAutomatic()`.
 
       formatMultiLaneAxis: (interval, width = 5) ->
-        {@startTimestamp, endTimestamp} = interval
-        @intervalLength = endTimestamp - @startTimestamp
-        @width = width
-
-__TODO__:  fix saving options.
-
-        oldAxisLineOffset = @options.axisLineOffset
+        {startTimestamp, endTimestamp} = interval
+        intervalLength = endTimestamp - startTimestamp
+        width = width
 
 In the beginning we format the first lane using `formatAutomatic()`:
 
@@ -212,38 +208,40 @@ Then, we need to format lanes one by one, increasing interval type, until we it 
 
 __Note__:  switch could be changed to some array progression, should it be done?
 
-        @options.intervalMultiplier = 1
-        @options.labelPlacement = 'interval'
-        while @options.intervalType isnt 'year'
+        currentIntervalType = @options.intervalType
+        currentLaneOffset = 0
+        while currentIntervalType isnt 'year'
 
 We increase interval to the next interval type interval.
 
-          switch @options.intervalType
+          switch currentIntervalType
             when 'millisecond', 'second', 'minute', 'hour'
-              @options.intervalType = 'day'
+              currentIntervalType = 'day'
             when 'day', 'week'
-              @options.intervalType = 'month'
+              currentIntervalType = 'month'
             when 'month'
-              @options.intervalType = 'year'
+              currentIntervalType = 'year'
+          newOptions = cloneDict(@options)
+          newOptions.intervalType = currentIntervalType
+          newOptions.intervalMultiplier = 1
+          newOptions.labelPlacement = 'interval'
 
 Now we format a lane using the new interval type and multiplier, and after changing placement options.  New data is merged with previous data.
 
 __Note__:  merging code should be done in some other function. Refactor.
 
-          @options.axisLineOffset += @options.laneOffset
-          newLane = @formatFixed interval, width
+          currentLaneOffset += @options.laneOffset
+          newOptions.axisLineOffset = currentLaneOffset
+          fixedFormatter = new FixedTimeAxisMaker(newOptions)
+          newLane = fixedFormatter.formatFixed(interval, width)
           features =
             lines: features.lines.concat newLane.lines
             textLabels: features.textLabels.concat newLane.textLabels
-
-__TODO__:  these horrible options restoration shoud be rewritten with the whole otpions and argument system.
-
-        @options.axisLineOffset = oldAxisLineOffset
         features
 
 #### The `formatAutomatic()` function ####
 
-A function that formats time axis.  It is done in two steps:  deciding which _edge time points_ should be used for formatting, and actual formatting.  The second step is done in the `formatFixed()` function.  The first step is done here.
+A function that formats time axis.  It is done in two steps:  deciding which _edge time points_ should be used for formatting, and actual formatting.  The second step is done by the `FixedTimeAxisMaker`, the first is done by the `findAutomaticOptions()` function.
 
 It has the following arguments:
  * `interval`:  a dictionary with `start` and `end` values, each are _milliseconds from Epoch_.
@@ -252,36 +250,124 @@ It has the following arguments:
 It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
 
       formatAutomatic: (interval, width) ->
-        {@startTimestamp, endTimestamp} = interval
-        @intervalLength = endTimestamp - @startTimestamp
-        @width = width
+        {startTimestamp, endTimestamp} = interval
+        intervalLength = endTimestamp - startTimestamp
+        width = width
 
-To decide which interval between _edge time points_ should be used, we increase that interval until we have no more points than is allowed by `@options.tightness`.  Intervals between edge points are defined by a combination of `intervalType` and `intervalMultiplier`.  We store such combinations in the `TimeAxisMaker.intervalsProgression` structure.  We put code that calculates approximate interval between time points for such a combination into the function `TimeAxisMaker.findNominalInterval()` (this is because we can have 28 to 31 days in a month etc).
+We find the tick and label options by calling subroutine:
+
+        automaticOptions = @findAutomaticOptions intervalLength
+
+Now, after we have found right options, we can call the `formatFixed()` function to do formatting for that interval, using merge of current opitons and found options.
+
+        newOptions = mergeDict(@options, automaticOptions)
+        newOptions.axisLineOffset = 0
+        fixedFormatter = new FixedTimeAxisMaker(newOptions)
+        fixedFormatter.formatFixed(interval, width)
+
+#### The `findAutomaticOptions()` function ####
+
+This function finds right options for `FixedTimeAxisMaker`, such that axes is formatted automatically depending on its interval.  `intervalLength` is length of the interval in milliseconds.  It returns a dictionary with options that are determined (and only them).  This dictionary can extend other dictionary with the rest of options.
+
+      findAutomaticOptions: (intervalLength) ->
+
+To decide which interval between _edge time points_ should be used, we increase the interval until we have no more points than is allowed by `@options.tightness`.  Intervals between edge points are defined by a combination of `intervalType` and `intervalMultiplier`.  We store such combinations in the `TimeAxisMaker.intervalsProgression` structure.  We put code that calculates approximate interval between time points for such a combination into the function `TimeAxisMaker.findNominalInterval()` (this is because we can have 28 to 31 days in a month etc).
 
         intervalTypeIndex = 0
         intervalMultiplierIndex = 0
-        currentStepInterval = TimeAxisMaker.findNominalInterval(TimeAxisMaker.intervalsProgression[intervalTypeIndex].type, TimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers[intervalMultiplierIndex])
-        while currentStepInterval * @options.tightness < @intervalLength
+        currentStepInterval = AutomaticTimeAxisMaker.findNominalInterval(AutomaticTimeAxisMaker.intervalsProgression[intervalTypeIndex].type, AutomaticTimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers[intervalMultiplierIndex])
+        while currentStepInterval * @options.tightness < intervalLength
           intervalMultiplierIndex += 1
-          if intervalMultiplierIndex >= TimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers.length
+          if intervalMultiplierIndex >= AutomaticTimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers.length
             intervalTypeIndex += 1
             intervalMultiplierIndex = 0
-          currentStepInterval = TimeAxisMaker.findNominalInterval(TimeAxisMaker.intervalsProgression[intervalTypeIndex].type, TimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers[intervalMultiplierIndex])
+          currentStepInterval = AutomaticTimeAxisMaker.findNominalInterval(AutomaticTimeAxisMaker.intervalsProgression[intervalTypeIndex].type, AutomaticTimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers[intervalMultiplierIndex])
 
 __Note__:  after finding suitable interval we maybe need to adjust it back.  I'm not sure, needs to be investigated.
 
 __Note__:  the stuff above is really ugly.  I need to do something with that.
 
-Now, after we have found right interval, we can call the `formatFixed()` function to do formatting for that interval.  Depending on `intervalType` we choose interval or point label placement.
+Depending on `intervalType` we choose interval or point label placement.
 
-        @options.intervalType = TimeAxisMaker.intervalsProgression[intervalTypeIndex].type
-        @options.intervalMultiplier = TimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers[intervalMultiplierIndex]
-        switch @options.intervalType
+        newOptions = {}
+        newOptions.intervalType = AutomaticTimeAxisMaker.intervalsProgression[intervalTypeIndex].type
+        newOptions.intervalMultiplier = AutomaticTimeAxisMaker.intervalsProgression[intervalTypeIndex].multipliers[intervalMultiplierIndex]
+        switch newOptions.intervalType
           when 'year', 'month', 'week', 'day'
-            @options.labelPlacement = 'interval'
+            newOptions.labelPlacement = 'interval'
           else
-            @options.labelPlacement = 'point'
-        @formatFixed(interval, width)
+            newOptions.labelPlacement = 'point'
+        return newOptions
+
+#### The `findNominalInterval()` function ####
+
+This function returns the approximate length of interval between two consecutive edge time points for a given values of `intervalType` and `intervalMultiplier`.
+
+Return value is in milliseconds.
+
+      @findNominalInterval: (intervalType, intervalMultiplier) ->
+        switch intervalType
+          when 'year'
+            millisecondsInYear = 1000*60*60*24*365
+            intervalMultiplier * millisecondsInYear
+          when 'month'
+            millisecondsInMonth = 1000*60*60*24*30
+            intervalMultiplier * millisecondsInMonth
+          when 'week'
+            millisecondsInWeek = 1000*60*60*24*7
+            intervalMultiplier * millisecondsInWeek
+          when 'day'
+            millisecondsInDay = 1000*60*60*24
+            intervalMultiplier * millisecondsInDay
+          when 'hour'
+            millisecondsInHour = 1000*60*60
+            intervalMultiplier * millisecondsInHour
+          when 'minute'
+            millisecondsInMinute = 1000*60
+            intervalMultiplier * millisecondsInMinute
+          when 'second'
+            intervalMultiplier * 1000
+          when 'millisecond'
+            intervalMultiplier
+
+__Note__:  should we optimize it here (both precalculate numbers and deduplicate code)?
+
+#### The `@intervalsProgression` property ####
+
+This property defines intervals that are could be used for formatting of time axis.  It is an array of objects, each of objects has two keys:  'type' with value of `intervalType` and 'multipliers' with array of values for `intervalMultiplier`.
+
+      @intervalsProgression: [
+        {type: 'millisecond', multipliers: [1, 5, 10, 50, 100, 500]}
+        {type: 'second', multipliers: [1, 5, 15, 30]}
+        {type: 'minute', multipliers: [1, 5, 15, 30]}
+        {type: 'hour', multipliers: [1, 3, 6, 12]}
+        {type: 'day', multipliers: [1]}
+        {type: 'week', multipliers: [1]}
+        {type: 'month', multipliers: [1, 3, 6]}
+        {type: 'year', multipliers: [1, 5, 10, 50, 100, 500, 1000, 5000, 10000
+          50000, 100000, 1000000, 10000000, 100000000]}
+      ]
+
+### The `FixedTimeAxisMaker` class ###
+
+__TODO__: add documentotion.
+
+    class FixedTimeAxisMaker
+
+#### The `FixedTimeAxisMaker()` constructor ####
+
+      constructor: (options) ->
+        @options =
+          tightness: options.tightness ? 5
+          tickLength: options.tickLength ? 10
+          tickTailRatio: options.tickTailRatio ? 0.2
+          tickLaneMultiplier: options.tickLaneMultiplier ? 1.5
+          axisLineOffset: options.axisLineOffset ? 0.0
+          intervalType: options.intervalType ? 'year'
+          labelPlacement: options.labelPlacement ? 'point'
+          intervalMultiplier: options.intervalMultiplier ? 1
+          labelOffset: options.labelOffset ? 12
+          laneOffset: options.laneOffset ? 30
 
 #### The `formatFixed()` function ####
 
@@ -292,22 +378,22 @@ A function that formats time axis.  It has two arguments:
 It returns a formatted time axis object.  This object is a collection of features with their coordinates in a viewport (the top left point of the viewport is (0,0), the top-right is (0, width)).
 
       formatFixed: (interval, width) ->
-        {@startTimestamp, endTimestamp} = interval
-        @intervalLength = endTimestamp - @startTimestamp
-        @width = width
+        {startTimestamp, endTimestamp} = interval
+        intervalLength = endTimestamp - startTimestamp
+        width = width
 
 We can put on axis ticks and labels, and also colour areas between them (but the coloring is not implemented yet).  They correspond to a set of time points.  Labels could correspond to time points or to time intervals between these points.
 
 So we need to build a list of time points that correspond to the given `interval`.  We will put such code in a special function, `findPointList()`.
 
-        pointList = @findPointList @startTimestamp, endTimestamp
+        pointList = @findPointList startTimestamp, endTimestamp
 
 Now, when we have found the list of time points, we need to construct a dictionary with graphical elements.  To transform time value into a horizontal coordinate we use the `timeToCoord()` function.  We start with ticks.  Each tick is a line.  The @options.tickLength parameter is a base length of a tick.  We set tick length from baseline downwards to `@options.tickLength`, and `@options.tickLength * @options.tickTailRatio` upwards.
 
         ticks = for timePoint in pointList
           {
-            x1: @timeToCoord timePoint
-            x2: @timeToCoord timePoint
+            x1: @timeToCoord timePoint, startTimestamp, intervalLength, width
+            x2: @timeToCoord timePoint, startTimestamp, intervalLength, width
             y1: @options.axisLineOffset + -@options.tickLength * @options.tickTailRatio
             y2: @options.axisLineOffset + @options.tickLength
           }
@@ -316,7 +402,7 @@ We also add axis (a horizontal line).  It spans the whole width of the given int
 
         axisLine = {
           x1: 0
-          x2: @width
+          x2: width
           y1: @options.axisLineOffset
           y2: @options.axisLineOffset
         }
@@ -329,7 +415,7 @@ To do it we first make a list of text labels assuming point label placement.
 
         textLabels = for timestamp in pointList
           {
-            x: @timeToCoord timestamp
+            x: @timeToCoord timestamp, startTimestamp, intervalLength, width
             y: @options.axisLineOffset + @options.labelOffset
             text: @formatLabel timestamp
           }
@@ -530,42 +616,9 @@ Function arguments:
 
 It returns a number between 0 and `@width`.
 
-      timeToCoord: (timestamp) ->
-        timeFromStart = timestamp - @startTimestamp
-        coordinate = timeFromStart * @width / @intervalLength
-
-#### The `findNominalInterval()` function ####
-
-This function returns the approximate length of interval between two consecutive edge time points for a given values of `intervalType` and `intervalMultiplier`.
-
-Return value is in milliseconds.
-
-      @findNominalInterval: (intervalType, intervalMultiplier) ->
-        switch intervalType
-          when 'year'
-            millisecondsInYear = 1000*60*60*24*365
-            intervalMultiplier * millisecondsInYear
-          when 'month'
-            millisecondsInMonth = 1000*60*60*24*30
-            intervalMultiplier * millisecondsInMonth
-          when 'week'
-            millisecondsInWeek = 1000*60*60*24*7
-            intervalMultiplier * millisecondsInWeek
-          when 'day'
-            millisecondsInDay = 1000*60*60*24
-            intervalMultiplier * millisecondsInDay
-          when 'hour'
-            millisecondsInHour = 1000*60*60
-            intervalMultiplier * millisecondsInHour
-          when 'minute'
-            millisecondsInMinute = 1000*60
-            intervalMultiplier * millisecondsInMinute
-          when 'second'
-            intervalMultiplier * 1000
-          when 'millisecond'
-            intervalMultiplier
-
-__Note__:  should we optimize it here (both precalculate numbers and deduplicate code)?
+      timeToCoord: (timestamp, startTimestamp, intervalLength, width) ->
+        timeFromStart = timestamp - startTimestamp
+        coordinate = timeFromStart * width / intervalLength
 
 #### The `formatLabel()` function ####
 
@@ -649,23 +702,7 @@ Returns a string.
             else
               ".#{ timePoint.getMilliseconds() }"
 
-#### The `@intervalsProgression` property ####
-
-This property defines intervals that are could be used for formatting of time axis.  It is an array of objects, each of objects has two keys:  'type' with value of `intervalType` and 'multipliers' with array of values for `intervalMultiplier`.
-
-      @intervalsProgression: [
-        {type: 'millisecond', multipliers: [1, 5, 10, 50, 100, 500]}
-        {type: 'second', multipliers: [1, 5, 15, 30]}
-        {type: 'minute', multipliers: [1, 5, 15, 30]}
-        {type: 'hour', multipliers: [1, 3, 6, 12]}
-        {type: 'day', multipliers: [1]}
-        {type: 'week', multipliers: [1]}
-        {type: 'month', multipliers: [1, 3, 6]}
-        {type: 'year', multipliers: [1, 5, 10, 50, 100, 500, 1000, 5000, 10000
-          50000, 100000, 1000000, 10000000, 100000000]}
-      ]
-
-### The `TimeAxisRenderer` class ####
+### The `TimeAxisRenderer` class ###
 
 The `TimeAxisRenderer` class currently renders only to html canvas.
 
@@ -733,7 +770,8 @@ This function may be used to avoud aliasing of lines, especially on low-resoluti
 Both `TimeAxisMaker` and `TimeAxisRenderer` are exported.
 
     library =
-      TimeAxisMaker: TimeAxisMaker
+      FixedTimeAxisMaker: FixedTimeAxisMaker
+      AutomaticTimeAxisMaker: AutomaticTimeAxisMaker
       TimeAxisRenderer: TimeAxisRenderer
 
 We export both as a Node package and as a window property in client, depending on current environment.
@@ -743,7 +781,26 @@ We export both as a Node package and as a window property in client, depending o
     else
       window.TimelineScale = library
 
-### Helper code
+### Helper code ###
+
+#### Dictionary cloning function ####
+
+The function returns a deep copy of a dictionary or a value.  _Beware_:  the dictionary should only have simple data types as its properties, or another such dictionaries.  The function is defined mostly for cloning options objects.
+
+    cloneDict = (dict) ->
+      newDict = JSON.parse(JSON.stringify(dict))
+
+#### Dictionary extending function ####
+
+The function extends shallow copy of a dictionary with a shallow copy of another dictionary.  The function is defined mostly for cloning options objects.
+
+Returns merge of two dictionaries, a new dictionary.
+
+    mergeDict = (firstDict, secondDict) ->
+      newDict = cloneDict(firstDict)
+      for own key, value of secondDict
+        firstDict[key] = value
+      newDict
 
 Library tests
 -------------

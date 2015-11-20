@@ -2,3 +2,4 @@
 *.html
 temp/
 build/
+node_modules/
